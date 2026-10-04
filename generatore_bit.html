@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Generatore di bit — moneta, dado e tombola (v2.8, pagina HTML)</title>
+<style>
+:root{
+  --bg:#f5f5f5; --card:#ffffff; --border:#ddd; --text:#222; --muted:#666;
+  --ok-bg:#e8f5e9; --ok-fg:#2e7d32;
+  --warn-bg:#fff3e0; --warn-fg:#e65100;
+  --fail-bg:#ffebee; --fail-fg:#c62828;
+  --neutral-bg:#fafafa; --neutral-fg:#666;
+  --mono:"Ubuntu Mono","DejaVu Sans Mono",monospace;
+  --sans:"Ubuntu","Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);padding:16px 12px 60px;}
+#pagina{max-width:900px;margin:0 auto;}
+h1{font-size:1.15rem;margin:4px 0 2px;}
+.subtitle{color:var(--muted);font-size:.85rem;margin:0 0 14px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:14px 14px 16px;margin-bottom:14px;}
+.card h2{font-size:.95rem;margin:0 0 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.card h2 .badge{font-size:.7rem;font-weight:normal;background:var(--neutral-bg);color:var(--neutral-fg);border-radius:10px;padding:2px 8px;}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;align-items:center;}
+button{background:#37474f;color:#fff;border:none;border-radius:5px;padding:8px 14px;font-size:.85rem;cursor:pointer;font-family:var(--sans);}
+button:hover{background:#263238;}
+button.secondary{background:#607d8b;}
+button.secondary:hover{background:#546e7a;}
+button:disabled{background:#c8c8c8;cursor:not-allowed;}
+input[type=text], textarea, input[type=number], select{
+  font-family:var(--mono);font-size:.82rem;border:1px solid var(--border);border-radius:4px;
+  padding:6px 8px;width:100%;background:#fcfcfc;
+}
+input[type=number]{width:110px;display:inline-block;}
+input[type=radio]{width:auto;margin-right:6px;vertical-align:middle;}
+textarea{resize:vertical;min-height:56px;}
+label{font-size:.82rem;}
+:focus-visible{outline:3px solid #1565c0;outline-offset:2px;}
+.grid4{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:10px;}
+@media(min-width:700px){.grid4{grid-template-columns:repeat(2,1fr);}}
+.source-box{border:1px solid var(--border);border-radius:5px;padding:10px;background:#fcfcfc;}
+.source-box h3{margin:0 0 6px;font-size:.85rem;}
+.source-box p{font-size:.78rem;color:var(--muted);margin:0 0 8px;line-height:1.45;}
+.source-box .opz{display:block;margin:6px 0;}
+.source-box .campo{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:4px 0 8px;font-size:.8rem;}
+.tag{display:inline-block;font-size:.65rem;padding:1px 6px;border-radius:8px;margin-left:4px;vertical-align:middle;}
+.tag.real{background:#e3f2fd;color:#1565c0;}
+.status{font-family:var(--mono);font-size:.78rem;padding:8px;border-radius:4px;white-space:pre-wrap;line-height:1.5;overflow-wrap:anywhere;}
+.status.ok{background:var(--ok-bg);color:var(--ok-fg);}
+.status.warn{background:var(--warn-bg);color:var(--warn-fg);}
+.status.fail{background:var(--fail-bg);color:var(--fail-fg);}
+.status.neutral{background:var(--neutral-bg);color:var(--neutral-fg);}
+.status p{margin:0 0 6px;}
+.status p:last-child{margin-bottom:0;}
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.76rem;}
+th,td{padding:4px 6px;text-align:left;border-bottom:1px solid #eee;overflow-wrap:anywhere;}
+th{font-family:var(--sans);font-size:.72rem;color:var(--muted);}
+.pill{padding:2px 6px;border-radius:8px;font-size:.72rem;white-space:nowrap;}
+td:last-child .pill{display:inline-block;}
+table.esiti td:last-child,table.esiti th:last-child{width:1%;white-space:nowrap;}
+.pill.pass{background:var(--ok-bg);color:var(--ok-fg);}
+.pill.fail{background:var(--fail-bg);color:var(--fail-fg);}
+.out-box{font-family:var(--mono);font-size:.72rem;background:#fafafa;border:1px solid var(--border);border-radius:4px;padding:8px;word-break:break-all;max-height:160px;overflow:auto;}
+.warning-banner{background:#fff3e0;border:1px solid #ffb74d;color:#7a4a00;border-radius:6px;padding:10px 12px;font-size:.8rem;margin-bottom:14px;line-height:1.5;}
+.final-box{background:#0d1117;color:#c9d1d9;border-radius:6px;padding:14px;font-family:var(--mono);font-size:.85rem;word-break:break-all;line-height:1.7;margin-bottom:10px;}
+.final-box .lbl{color:#8b949e;font-size:.68rem;text-transform:none;display:block;margin-bottom:2px;}
+.final-box .val{display:block;margin-bottom:8px;}
+.final-box textarea{background:#0d1117;color:#c9d1d9;border:1px solid #30363d;min-height:96px;width:100%;font-size:.85rem;line-height:1.5;}
+small.note{color:var(--muted);display:block;margin-top:6px;font-size:.72rem;}
+p.testo{font-size:.8rem;color:var(--muted);margin:-4px 0 10px;line-height:1.5;}
+.barra{height:10px;background:#e6e6e6;border-radius:5px;overflow:hidden;margin:8px 0 2px;}
+.barra i{display:block;height:100%;background:#37474f;}
+.tasti{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;}
+.tasti button{min-height:44px;min-width:56px;font-family:var(--mono);font-size:.95rem;}
+.prompt{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+.prompt input{flex:1 1 140px;width:auto;min-height:40px;font-size:.95rem;}
+.cancMark{font-family:var(--mono);font-size:.78rem;color:var(--muted);}
+.negativo{display:inline-block;background:#111;color:#fff;font-weight:700;padding:2px 10px;border-radius:3px;letter-spacing:.03em;}
+h3 .negativo{font-size:1.05rem;padding:3px 12px;}
+.final-box textarea.sequenza{background:#ffeb3b;color:#111;border:1px solid #c9b100;}
+@media(max-width:600px){.row button{min-height:44px;}}
+@media(prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important;}}
+</style>
+</head>
+<body>
+<div id="pagina">
+<h1>Generatore di bit — moneta, dado e tombola</h1>
+<p class="subtitle">
+  Standalone, offline, zero dipendenze esterne. Non invia e non salva nulla: se chiudi la pagina prima di scaricare i bit, vanno persi.<br>
+  Build <b>2.8</b> (pagina HTML, 2026-10-04) — <b>NON AUDITATA</b>, non ancora provata su Firefox e Raspberry Pi. Stessa logica del programma Python <code>generatore_bit.py</code> v2.8.
+</p>
+<noscript><div class="warning-banner">Questa pagina ha bisogno di JavaScript per funzionare.</div></noscript>
+<div id="schermo"></div>
+<div class="card" id="cardControlli">
+  <h2>Autotest all'avvio <span class="badge" id="controlliTitolo">verifica di regressione</span></h2>
+  <div id="controlliElenco"></div>
+</div>
+<div class="card">
+  <h2>Integrità dell'applicazione <span class="badge">controllo diagnostico</span></h2>
+  <p class="testo">SHA-256 del blocco &lt;script&gt; core, calcolato al caricamento. Copre solo il codice JS, non l'intero HTML: serve a verificare di eseguire il codice atteso.</p>
+  <div id="impronta" class="out-box">calcolo…</div>
+</div>
+</div>
+<script id="core-script">
+"use strict";
+/* ==========================================================================
+   Generatore di bit da moneta, dado e tombola - pagina HTML (v2.8)
+   Stessa logica del programma Python generatore_bit.py v2.8: conversioni,
+   stima prudente della min-entropia, soglie, annullamenti, registro.
+   ========================================================================== */
+const VERSIONE = "2.8";
+const MAX_UNDO = 20;
+const RECENT_SHOW = 12;
+const BIT_DEFAULT = 480;
+const TARGET_DEFAULT = 384;
+const TOTALE_DEFAULT = 1200;
+const EPS = 1e-9;
+const PIPELINE = "EntropyPipeline v2.0.0-beta6 o successiva";
+const TARGET_SUGGERITI = [[320, "minimo"], [384, "consigliato"], [416, "più sicuro"]];
+const BITS_PER_ESITO = { dado: 2, moneta: 1, tombola: 3 };
+const ORDINE_FONTI = ["moneta", "dado", "tombola"];
+
+/* ------------------------------ modello ---------------------------------- */
+function Profilo(nome, biasRel, pSame) {
+  if (!(biasRel >= 0 && biasRel <= 0.5)) throw new Error("bias_rel deve essere tra 0 e 0.5");
+  if (!(pSame >= 0.5 && pSame <= 0.6)) throw new Error("p_same deve essere tra 0.5 e 0.6");
+  this.nome = nome; this.biasRel = biasRel; this.pSame = pSame;
+}
+Profilo.prototype.hDado = function () { const d = this.biasRel; return -Math.log2((1 + d) / (4 - 2 * d)); };
+Profilo.prototype.hTombola = function () { const d = this.biasRel; return -Math.log2((1 + d) / 8); };
+Profilo.prototype.hMoneta = function () { const p = Math.max(this.pSame, 1 - this.pSame); return -Math.log2(p); };
+Profilo.prototype.h = function (tipo) {
+  return tipo === "dado" ? this.hDado() : tipo === "moneta" ? this.hMoneta() : this.hTombola();
+};
+const PROFILI = {
+  "1": new Profilo("solo prova", 0.0, 0.5),
+  "2": new Profilo("prudente", 0.05, 0.51),
+  "3": new Profilo("molto prudente", 0.10, 0.52)
+};
+function hCiclo(p, nd, nm, nt) { return nd * p.hDado() + nm * p.hMoneta() + nt * p.hTombola(); }
+function bitCiclo(nd, nm, nt) { return 2 * nd + nm + 3 * nt; }
+function ciclPer(target, hPerCiclo) { return Math.ceil(target / hPerCiclo - EPS); }
+function bitPerEsecuzione(p, nd, nm, nt, modo, soglia) {
+  const bc = bitCiclo(nd, nm, nt);
+  let giri;
+  if (modo === "entropia") giri = ciclPer(soglia, hCiclo(p, nd, nm, nt));
+  else if (modo === "bit") giri = Math.ceil(soglia / bc);
+  else return null;
+  return [giri, giri * bc];
+}
+function ripetizioniNecessarie(totale, bitEsec) { return Math.max(1, Math.ceil(totale / bitEsec)); }
+
+/* ------------------------------ SHA-256 ---------------------------------- */
+const K256 = new Uint32Array([
+  0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+  0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+  0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+  0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+  0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+  0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+  0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+  0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+]);
+function sha256Bytes(msg) {
+  const rotr = (x, n) => (x >>> n) | (x << (32 - n));
+  const l = msg.length, bitLen = l * 8;
+  const total = (((l + 9 + 63) >> 6) << 6);
+  const buf = new Uint8Array(total);
+  buf.set(msg); buf[l] = 0x80;
+  const dv = new DataView(buf.buffer);
+  dv.setUint32(total - 8, Math.floor(bitLen / 0x100000000), false);
+  dv.setUint32(total - 4, bitLen >>> 0, false);
+  const H = new Uint32Array([0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19]);
+  const w = new Uint32Array(64);
+  for (let off = 0; off < total; off += 64) {
+    for (let i = 0; i < 16; i++) w[i] = dv.getUint32(off + i * 4, false);
+    for (let i = 16; i < 64; i++) {
+      const s0 = rotr(w[i - 15], 7) ^ rotr(w[i - 15], 18) ^ (w[i - 15] >>> 3);
+      const s1 = rotr(w[i - 2], 17) ^ rotr(w[i - 2], 19) ^ (w[i - 2] >>> 10);
+      w[i] = (w[i - 16] + s0 + w[i - 7] + s1) >>> 0;
+    }
+    let a = H[0], b = H[1], c = H[2], d = H[3], e = H[4], f = H[5], g = H[6], h = H[7];
+    for (let i = 0; i < 64; i++) {
+      const S1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
+      const ch = (e & f) ^ (~e & g);
+      const t1 = (h + S1 + ch + K256[i] + w[i]) >>> 0;
+      const S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
+      const maj = (a & b) ^ (a & c) ^ (b & c);
+      const t2 = (S0 + maj) >>> 0;
+      h = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+    }
+    H[0] = (H[0] + a) >>> 0; H[1] = (H[1] + b) >>> 0; H[2] = (H[2] + c) >>> 0; H[3] = (H[3] + d) >>> 0;
+    H[4] = (H[4] + e) >>> 0; H[5] = (H[5] + f) >>> 0; H[6] = (H[6] + g) >>> 0; H[7] = (H[7] + h) >>> 0;
+  }
+  return Array.from(H, v => v.toString(16).padStart(8, "0")).join("");
+}
+function sha256Testo(s) { return sha256Bytes(new TextEncoder().encode(s)); }
+
+/* ------------------------------ sessione --------------------------------- */
+function Sessione(profilo, nDado, nMoneta, nTombola, modo, soglia) {
+  if (Math.min(nDado, nMoneta, nTombola) < 0) throw new Error("valori negativi non ammessi");
+  this.profilo = profilo;
+  this.n = { dado: nDado, moneta: nMoneta, tombola: nTombola };
+  this.fasi = ORDINE_FONTI.filter(t => this.n[t] > 0).map(t => [t, this.n[t]]);
+  if (this.fasi.length === 0) throw new Error("almeno una fonte deve essere > 0");
+  this.lunghCiclo = this.fasi.reduce((a, f) => a + f[1], 0);
+  if (modo !== "entropia" && modo !== "bit" && modo !== "nessuna") throw new Error("modo soglia non valido");
+  this.modo = modo; this.soglia = soglia;
+  this.esiti = [];     // [tipo, inserito, bits]
+  this.eventi = [];    // cronologia completa, mai cancellata
+  this.rilanci = [];
+}
+Sessione.prototype.slot = function () {
+  const p = this.esiti.length;
+  const ciclo = Math.floor(p / this.lunghCiclo) + 1;
+  let i = p % this.lunghCiclo;
+  for (const [tipo, n] of this.fasi) {
+    if (i < n) return { tipo, i, n, ciclo };
+    i -= n;
+  }
+  throw new Error("posizione non valida");
+};
+Sessione.prototype.aggiungi = function (tipo, inserito, bits) {
+  if (tipo !== this.slot().tipo) throw new Error("fonte diversa da quella attesa");
+  if (bits.length !== BITS_PER_ESITO[tipo] || /[^01]/.test(bits)) throw new Error("bit non validi");
+  this.esiti.push([tipo, inserito, bits]);
+  this.eventi.push(["esito", tipo, inserito, bits]);
+};
+Sessione.prototype.rilancio = function (valore) {
+  this.rilanci.push(valore);
+  this.eventi.push(["rilancio", valore]);
+};
+Sessione.prototype.undo = function (quanti) {
+  const k = Math.min(quanti, MAX_UNDO, this.esiti.length);
+  if (k <= 0) return 0;
+  const rimossi = [];
+  for (let j = 0; j < k; j++) rimossi.push(this.esiti.pop());
+  this.eventi.push(["undo", rimossi]);
+  return k;
+};
+Sessione.prototype.bitstring = function () { return this.esiti.map(e => e[2]).join(""); };
+Sessione.prototype.totalBits = function () { return this.esiti.reduce((a, e) => a + e[2].length, 0); };
+Sessione.prototype.totalH = function () { let s = 0; for (const e of this.esiti) s += this.profilo.h(e[0]); return s; };
+Sessione.prototype.fineCiclo = function () { return this.esiti.length > 0 && this.esiti.length % this.lunghCiclo === 0; };
+Sessione.prototype.sogliaRaggiunta = function () {
+  if (this.modo === "entropia") return this.totalH() >= this.soglia - EPS;
+  if (this.modo === "bit") return this.totalBits() >= this.soglia;
+  return false;
+};
+Sessione.prototype.completato = function () { return this.fineCiclo() && this.sogliaRaggiunta(); };
+Sessione.prototype.ricostruisciDaEventi = function () {
+  const lista = [];
+  for (const ev of this.eventi) {
+    if (ev[0] === "esito") lista.push([ev[1], ev[2], ev[3]]);
+    else if (ev[0] === "undo") for (let j = 0; j < ev[1].length; j++) lista.pop();
+  }
+  return lista;
+};
+Sessione.prototype.coerente = function () {
+  return JSON.stringify(this.ricostruisciDaEventi()) === JSON.stringify(this.esiti);
+};
+Sessione.prototype.conteggi = function () {
+  const c = { dado: { "1": 0, "2": 0, "3": 0, "4": 0 }, moneta: { T: 0, C: 0 },
+              tombola: { "1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 0, "8": 0 } };
+  for (const [tipo, ins] of this.esiti) c[tipo][ins] += 1;
+  return c;
+};
+function fmtPct(x, d) { return (x * 100).toFixed(d); }
+Sessione.prototype.parametriTesto = function () {
+  const p = this.profilo;
+  const righe = [
+    "Profilo di stima: " + p.nome,
+    "  scostamento relativo massimo ipotizzato per faccia/pallina: " + fmtPct(p.biasRel, 1) + "%",
+    "  probabilita' ipotizzata moneta stessa faccia: " + fmtPct(p.pSame, 1) + "%",
+    "  min-entropia stimata per esito: moneta " + p.hMoneta().toFixed(4) + " (su 1 bit), dado " +
+      p.hDado().toFixed(4) + " (su 2 bit), tombola " + p.hTombola().toFixed(4) + " (su 3 bit)",
+    "Per ciclo, nell'ordine di inserimento: moneta " + this.n.moneta + ", dado " + this.n.dado + " esiti validi, tombola " + this.n.tombola
+  ];
+  if (this.modo === "entropia") righe.push("Soglia: " + this.soglia + " bit di min-entropia stimata");
+  else if (this.modo === "bit") righe.push("Soglia: " + this.soglia + " bit grezzi");
+  else righe.push("Soglia: nessuna (conclusione manuale)");
+  return righe;
+};
+
+/* ------------------------------ registro --------------------------------- */
+function p2(n) { return String(n).padStart(2, "0"); }
+function fmtData(d) {
+  return d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getDate()) + " " +
+    p2(d.getHours()) + ":" + p2(d.getMinutes()) + ":" + p2(d.getSeconds());
+}
+function testoRegistro(sess, inizio, fine, sogliaOk, daPagina) {
+  const L = [];
+  L.push("REGISTRO GENERATORE BIT v" + VERSIONE);
+  if (daPagina) L.push("Generato dalla pagina HTML (stessa logica del programma Python v" + VERSIONE + ").");
+  L.push("NOTA: da solo il Generatore NON basta: questi bit vanno uniti ad altre sorgenti");
+  L.push("indipendenti con " + PIPELINE + " (strumento della suite entropy-suite).");
+  L.push("Se si usa SOLO il Generatore servono circa " + TOTALE_DEFAULT + " bit in tutto: questa esecuzione ne ha dati");
+  L.push(sess.totalBits() + ", quindi l'esecuzione va ripetuta " +
+    ripetizioniNecessarie(TOTALE_DEFAULT, Math.max(1, sess.totalBits())) + " volte in tutto.");
+  L.push("Inizio: " + fmtData(inizio) + " (ora locale)   Fine: " + fmtData(fine));
+  for (const r of sess.parametriTesto()) L.push(r);
+  L.push("Il registro contiene le stesse informazioni dei bit: trattalo come riservato.");
+  L.push("");
+  L.push("CRONOLOGIA COMPLETA (in ordine di inserimento, nulla viene cancellato)");
+  sess.eventi.forEach((ev, idx) => {
+    const k = String(idx + 1).padStart(4);
+    if (ev[0] === "esito") L.push(k + "  esito   " + ev[1].padEnd(8) + " inserito=" + ev[2].padEnd(6) + " bit=" + ev[3]);
+    else if (ev[0] === "rilancio") L.push(k + "  rilancio dado: uscito " + ev[1]);
+    else {
+      const rim = ev[1].slice().reverse().map(e => e[0] + ":" + e[1]).join(", ");
+      L.push(k + "  ANNULLATI " + ev[1].length + " esiti (dal piu' recente): " + rim);
+    }
+  });
+  L.push("");
+  L.push("ESITI VALIDI FINALI");
+  sess.esiti.forEach((e, idx) => {
+    L.push(String(idx + 1).padStart(4) + "  " + e[0].padEnd(8) + " inserito=" + e[1].padEnd(6) + " bit=" + e[2]);
+  });
+  L.push("");
+  const undoEv = sess.eventi.filter(ev => ev[0] === "undo");
+  const nRim = undoEv.reduce((a, ev) => a + ev[1].length, 0);
+  L.push("Comandi di annullamento: " + undoEv.length + " (esiti annullati in totale: " + nRim + ")");
+  L.push("Rilanci del dado (5 o 6): " + sess.rilanci.length);
+  L.push("Bit totali: " + sess.totalBits());
+  L.push("Bit sicuri stimati (min-entropia, modello prudente): " + sess.totalH().toFixed(2));
+  if (sess.modo !== "nessuna") L.push("Soglia raggiunta: " + (sogliaOk ? "si" : "NO"));
+  L.push("Coerenza cronologia/esiti: " + (sess.coerente() ? "OK" : "ERRORE"));
+  L.push("SHA-256 della stringa di bit: " + sha256Testo(sess.bitstring()));
+  return L.join("\n") + "\n";
+}
+function nomiFile(base) {
+  let b = (base || "").trim().replace(/[^A-Za-z0-9._-]/g, "_");
+  if (!b) b = "bits.txt";
+  const punto = b.lastIndexOf(".");
+  const radice = punto > 0 ? b.slice(0, punto) : b;
+  return [b, radice + "_registro.txt"];
+}
+
+/* ------------------------------ testi ------------------------------------ */
+function f1(x, larg) { return x.toFixed(1).padStart(larg || 0); }
+function righeRipetizioni(cfg) {
+  const L = [];
+  L.push("SE USI SOLO IL GENERATORE (senza altre sorgenti esterne e indipendenti):");
+  L.push(PIPELINE + " chiede circa " + TOTALE_DEFAULT + " bit per ricavare 256 bit (circa 200 giri da 6 bit). Con versioni precedenti della pagina questi numeri non valgono.");
+  const prev = bitPerEsecuzione(cfg.profilo, cfg.nd, cfg.nm, cfg.nt, cfg.modo, cfg.soglia);
+  if (prev === null) {
+    L.push("Con «fine» deciso da te non posso calcolarlo adesso: lo scrivo alla fine, in base ai bit che avrai raccolto.");
+  } else {
+    const [giri, bit] = prev;
+    const n = ripetizioniNecessarie(TOTALE_DEFAULT, bit);
+    L.push("Una esecuzione con questa impostazione = " + giri + " giri = " + bit + " bit.");
+    if (n === 1) L.push("Quindi basta UNA esecuzione per arrivare a quel numero di bit.");
+    else {
+      L.push("Quindi questa pagina va usata " + n + " VOLTE in tutto, anche in giorni diversi, scaricando ogni volta i file e ricominciando.");
+    }
+  }
+  L.push("Con altre sorgenti indipendenti ne servono meno: lo dice la Fase 4 di EntropyPipeline.");
+  return L;
+}
+function righeAvviso(sess) {
+  const bit = sess.totalBits();
+  const L = [];
+  L.push("COSA FARE ORA: da solo il Generatore non basta. Questi bit vanno uniti ad altre sorgenti INDIPENDENTI con " + PIPELINE + " (suite entropy-suite): incollali nella Fase 1 e prosegui con le Fasi 2, 3 e 4.");
+  L.push("SE USI SOLO IL GENERATORE servono circa " + TOTALE_DEFAULT + " bit in tutto.");
+  if (bit <= 0) L.push("Questa esecuzione non ha ancora dato bit.");
+  else if (bit >= TOTALE_DEFAULT) L.push("Questa esecuzione ha dato " + bit + " bit: da sola arriva a quel numero.");
+  else {
+    const n = ripetizioniNecessarie(TOTALE_DEFAULT, bit);
+    L.push("Questa esecuzione ha dato " + bit + " bit: va ripetuta " + n + " VOLTE in tutto, cioè ne mancano " + (n - 1) + ". Scarica ogni esecuzione con un nome diverso e incolla i bit di tutte, una dopo l'altra, nella STESSA finestra di EntropyPipeline.");
+  }
+  return L;
+}
+const TESTI = {
+  dado: ["DADO", "Scrivi il numero uscito (da 1 a 6). Con 5 o 6 rilancia il dado.", "Dado → "],
+  moneta: ["MONETA", "Scrivi T se è uscita testa, C se è uscita croce.", "Moneta → "],
+  tombola: ["TOMBOLA", "Scrivi il numero estratto (da 1 a 8).", "Tombola → "]
+};
+function plurale(n, uno, tanti) { return n === 1 ? uno : tanti; }
+function msgUndo(sess, n) {
+  if (n === 0) return "Non c'è niente da annullare";
+  return "Annullat" + plurale(n, "o", "i") + " " + n + " " + plurale(n, "inserimento", "inserimenti") +
+    ". Bit raccolti ora: " + sess.totalBits();
+}
+const isIntStr = s => /^[0-9]+$/.test(s);
+
+/* ------------------------------ stato e logica di inserimento ------------ */
+const stato = { schermata: "prep", cfg: null, s: null, msg: "", termina: false, inizio: null,
+                fine: null, undoCount: 0, conferma: null, salvato: false, baseNome: "bits.txt" };
+
+function processa(tipo, testo) {
+  const s = stato.s;
+  if (tipo === "dado") {
+    if (!isIntStr(testo) || +testo < 1 || +testo > 6) { stato.msg = "Non ho capito: scrivi un numero da 1 a 6"; return; }
+    const v = +testo;
+    if (v === 5 || v === 6) { s.rilancio(v); stato.msg = "Uscito " + v + ": rilancia il dado (nessun bit aggiunto)"; }
+    else s.aggiungi("dado", String(v), (v - 1).toString(2).padStart(2, "0"));
+  } else if (tipo === "moneta") {
+    const up = testo.toUpperCase();
+    if (up === "T" || up === "0" || up === "TESTA") s.aggiungi("moneta", "T", "0");
+    else if (up === "C" || up === "1" || up === "CROCE") s.aggiungi("moneta", "C", "1");
+    else stato.msg = "Non ho capito: scrivi T (testa) oppure C (croce)";
+  } else {
+    if (!isIntStr(testo) || +testo < 1 || +testo > 8) { stato.msg = "Non ho capito: scrivi un numero da 1 a 8"; return; }
+    const v = +testo;
+    s.aggiungi("tombola", String(v), (v - 1).toString(2).padStart(3, "0"));
+  }
+}
+function chiediConferma(testo, siFn) { stato.conferma = { testo, siFn }; }
+function comandoFine() {
+  const s = stato.s;
+  if (s.esiti.length === 0) { stato.msg = "Non hai ancora inserito niente: non c'è nulla da concludere"; return; }
+  const avvisi = [];
+  if (s.modo !== "nessuna" && !s.sogliaRaggiunta())
+    avvisi.push("non hai ancora raggiunto l'obiettivo (bit sicuri stimati: " + s.totalH().toFixed(1) + ")");
+  if (!s.fineCiclo()) avvisi.push("il giro non è finito");
+  if (avvisi.length) chiediConferma("Attenzione: " + avvisi.join("; ") + ". Concludere comunque?", () => { stato.termina = true; });
+  else stato.termina = true;
+}
+function comandoEsci() {
+  chiediConferma("Vuoi davvero ricominciare? Perderai tutto quello che hai inserito.", () => nuovaEsecuzione(true));
+}
+/* ritorna true se il testo era un comando */
+function gestisci(testo) {
+  const low = testo.trim().toLowerCase();
+  if (low === "q" || low === "quit" || low === "esci") { comandoEsci(); return true; }
+  if (low === "u" || low === "undo" || (low[0] === "u" && isIntStr(low.slice(1)))) {
+    const n = (low === "u" || low === "undo") ? 1 : parseInt(low.slice(1), 10);
+    stato.msg = msgUndo(stato.s, stato.s.undo(n));
+    return true;
+  }
+  if (low === "f" || low === "fine") { comandoFine(); return true; }
+  return false;
+}
+function dopoAzione() {
+  const s = stato.s;
+  if (stato.termina || s.completato()) {
+    if (stato.schermata !== "fine") stato.fine = new Date();
+    stato.schermata = "fine";
+  } else stato.schermata = "run";
+  render();
+}
+function inviaTesto(testo) {
+  const t = testo.trim();
+  stato.undoCount = 0;
+  if (t === "") { render(); return; }
+  if (!gestisci(t)) processa(stato.s.slot().tipo, t);
+  dopoAzione();
+}
+function annulla(n) {
+  stato.msg = msgUndo(stato.s, stato.s.undo(n));
+  stato.termina = false;
+  stato.undoCount = 0;
+  dopoAzione();
+}
+function nuovaEsecuzione(forza) {
+  const vai = () => { stato.s = null; stato.msg = ""; stato.termina = false; stato.salvato = false;
+                      stato.conferma = null; stato.schermata = "prep"; render(); };
+  if (forza) { vai(); return; }
+  if (stato.s && stato.s.esiti.length > 0 && !stato.salvato)
+    chiediConferma("Non hai ancora scaricato né copiato i bit: ricominciando li perdi. Ricominciare?", vai);
+  else vai();
+  render();
+}
+
+/* ------------------------------ interfaccia ------------------------------ */
+function el(tag, attrs, figli) {
+  const e = document.createElement(tag);
+  if (attrs) for (const k of Object.keys(attrs)) {
+    if (k === "class") e.className = attrs[k];
+    else if (k === "text") e.textContent = attrs[k];
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), attrs[k]);
+    else e.setAttribute(k, attrs[k]);
+  }
+  if (figli) for (const f of figli) if (f) e.appendChild(typeof f === "string" ? document.createTextNode(f) : f);
+  return e;
+}
+const puntoFine = () => window.matchMedia && window.matchMedia("(pointer: fine)").matches;
+function scheda(titolo, badge, figli) {
+  return el("div", { class: "card" }, [el("h2", null, [titolo, badge ? el("span", { class: "badge", text: badge }) : null])].concat(figli));
+}
+function boxStato(righe, tipo) {
+  const b = el("div", { class: "status " + tipo });
+  righe.forEach(r => b.appendChild(el("p", { text: r })));
+  return b;
+}
+function banner() {
+  return el("div", { class: "warning-banner" }, [
+    "⚠ ", el("b", { text: "Da solo il Generatore non basta." }),
+    " I bit che produce vanno uniti ad altre sorgenti INDIPENDENTI con " + PIPELINE +
+    " (lo strumento della suite entropy-suite, che li estrae con Peres e Toeplitz). Da solo il Generatore non produce una chiave."
+  ]);
+}
+function tabella(intest, righe) {
+  const t = el("table");
+  t.appendChild(el("tr", null, intest.map(h => el("th", { text: h }))));
+  righe.forEach(r => t.appendChild(el("tr", null, r.map(c => el("td", { text: String(c) })))));
+  return t;
+}
+function f1(x, larg) { return x.toFixed(1).padStart(larg || 0); }
+
+function renderConferma(radice) {
+  const c = stato.conferma;
+  radice.appendChild(boxStato([c.testo], "warn"));
+  radice.appendChild(el("div", { class: "row", style: "margin-top:8px;" }, [
+    el("button", { type: "button", text: "Sì", onclick: () => { const f = c.siFn; stato.conferma = null; f(); dopoOConferma(); } }),
+    el("button", { type: "button", class: "secondary", text: "No", onclick: () => { stato.conferma = null; render(); } })
+  ]));
+}
+function dopoOConferma() { if (stato.s && stato.schermata !== "prep") dopoAzione(); else render(); }
+
+/* contatori, barra e ultimi bit: comuni a lavoro e riepilogo */
+function blocchiAvanzamento(s) {
+  const out = [];
+  const tot = s.totalBits(), h = s.totalH();
+  let frac = null;
+  const box = el("div", { class: "status neutral" });
+  const riga = t => box.appendChild(el("p", { text: t }));
+  if (s.modo === "entropia") {
+    frac = Math.min(1, h / s.soglia);
+    riga("Bit raccolti: " + String(tot).padStart(4) + "      Bit sicuri (stima): " + f1(h, 6) + " su " + s.soglia);
+  } else if (s.modo === "bit") {
+    frac = Math.min(1, tot / s.soglia);
+    riga("Bit raccolti: " + String(tot).padStart(4) + " su " + s.soglia + "      Bit sicuri (stima): " + f1(h, 6));
+  } else {
+    riga("Bit raccolti: " + String(tot).padStart(4) + "      Bit sicuri (stima): " + f1(h, 6));
+    riga("Scrivi «fine» quando vuoi concludere.");
+  }
+  if (frac !== null) {
+    box.appendChild(el("div", { class: "barra", role: "progressbar", "aria-valuemin": "0", "aria-valuemax": "100",
+      "aria-valuenow": String(Math.round(frac * 100)), "aria-label": "Avanzamento verso l'obiettivo" },
+      [el("i", { style: "width:" + (frac * 100).toFixed(1) + "%" })]));
+    riga(f1(frac * 100, 5) + "%");
+  }
+  riga(s.profilo.nome.toUpperCase());
+  out.push(box);
+  const recent = s.bitstring().slice(-RECENT_SHOW);
+  out.push(el("div", { style: "font-size:.7rem;color:var(--muted);margin:10px 0 2px;", text: "Ultimi bit raccolti" }));
+  out.push(el("div", { class: "out-box" }, [recent ? "Ultimi " + recent.length + " bit: ..." + recent : "Ultimi bit: (ancora nessuno)"]));
+  return out;
+}
+
+function renderRun(radice) {
+  const s = stato.s, sl = s.slot();
+  const [nome, istr, promptTesto] = TESTI[sl.tipo];
+  radice.appendChild(banner());
+  const corpo = [];
+  for (const n of blocchiAvanzamento(s)) corpo.push(n);
+  corpo.push(el("div", { class: "source-box", style: "margin-top:10px;" }, [
+    el("h3", null, ["Ora tocca a: ", el("span", { class: "negativo", text: "► " + nome + " ◄" })]),
+    el("p", { text: "(inserimento " + (sl.i + 1) + " di " + sl.n + " in questo giro)   giro numero " + sl.ciclo }),
+    el("p", { text: istr })
+  ]));
+  if (stato.msg) { corpo.push(el("div", { style: "margin-top:10px;" }, [boxStato([stato.msg], "warn")])); stato.msg = ""; }
+  if (stato.conferma) {
+    const k = el("div", { style: "margin-top:10px;" }); renderConferma(k); corpo.push(k);
+    radice.appendChild(scheda("Inserimento", "in corso", corpo));
+    return;
+  }
+  const valori = sl.tipo === "dado" ? ["1", "2", "3", "4", "5", "6"] : sl.tipo === "moneta" ? ["T", "C"] : ["1", "2", "3", "4", "5", "6", "7", "8"];
+  const tasti = el("div", { class: "tasti", role: "group", "aria-label": "Inserimento rapido" });
+  for (const v of valori) {
+    const etichetta = sl.tipo === "moneta" ? (v === "T" ? "T testa" : "C croce") : (sl.tipo === "dado" && (v === "5" || v === "6") ? v + " rilancia" : v);
+    tasti.appendChild(el("button", { type: "button", text: etichetta, onclick: () => { inviaTesto(v); } }));
+  }
+  corpo.push(tasti);
+  const input = el("input", { type: "text", id: "ingresso", autocomplete: "off", autocapitalize: "off", spellcheck: "false",
+                              "aria-label": promptTesto.replace(" → ", ""), enterkeyhint: "done", placeholder: "oppure scrivi qui" });
+  const marca = el("span", { class: "cancMark", id: "undoMark", text: stato.undoCount ? "[CANC x" + stato.undoCount + "]" : "" });
+  input.addEventListener("keydown", ev => {
+    if (ev.key === "Enter") {
+      ev.preventDefault();
+      if (stato.undoCount > 0) { annulla(stato.undoCount); return; }
+      inviaTesto(input.value);
+    } else if ((ev.key === "Backspace" || ev.key === "Delete") && input.value === "") {
+      ev.preventDefault();
+      stato.undoCount += 1;
+      marca.textContent = "[CANC x" + stato.undoCount + "]";
+    }
+  });
+  input.addEventListener("input", () => { if (stato.undoCount > 0) input.value = ""; });
+  corpo.push(el("div", { class: "prompt" }, [el("label", { for: "ingresso", class: "negativo", text: promptTesto.trim() }), input, marca]));
+  corpo.push(el("small", { class: "note", text: "Hai sbagliato? Premi «Annulla l'ultimo» (oppure CANC o Backspace e poi Invio), oppure scrivi u. Scrivi fine per concludere, q per ricominciare senza salvare." }));
+  corpo.push(el("div", { class: "row", style: "margin-top:10px;" }, [
+    el("button", { type: "button", class: "secondary", text: "Annulla l'ultimo", onclick: () => annulla(1) }),
+    el("button", { type: "button", class: "secondary", text: "Fine", onclick: () => { comandoFine(); dopoAzione(); } }),
+    el("button", { type: "button", class: "secondary", text: "Ricomincia", onclick: () => { comandoEsci(); render(); } })
+  ]));
+  radice.appendChild(scheda("Inserimento", "giro " + sl.ciclo, corpo));
+  if (puntoFine()) setTimeout(() => { const i = document.getElementById("ingresso"); if (i) i.focus(); }, 0);
+}
+
+function scarica(nome, testo) {
+  const blob = new Blob([testo], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = nome; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+function copiaTesto(testo, areaFallback) {
+  const ok = () => { stato.salvato = true; stato.msg = "Bit copiati negli appunti."; render(); };
+  const manuale = () => { areaFallback.focus(); areaFallback.select(); try { if (document.execCommand("copy")) ok(); } catch (e) { /* manuale */ } };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(testo).then(ok, manuale);
+  else manuale();
+}
+
+function renderFine(radice) {
+  const s = stato.s;
+  const sogliaOk = s.modo !== "nessuna" ? s.sogliaRaggiunta() : true;
+  radice.appendChild(banner());
+  const corpo = [];
+  const righe = ["Hai raccolto " + s.totalBits() + " bit.  Bit sicuri (stima prudente): " + f1(s.totalH())];
+  if (s.modo !== "nessuna") righe.push("Obiettivo raggiunto: " + (sogliaOk ? "SI" : "NO"));
+  righe.push("Rilanci del dado: " + s.rilanci.length);
+  corpo.push(boxStato(righe, s.modo === "nessuna" || sogliaOk ? "ok" : "warn"));
+  corpo.push(el("div", { style: "font-size:.7rem;color:var(--muted);margin:10px 0 2px;", text: "Quante volte è uscito ogni risultato (serve per controllo)" }));
+  const c = s.conteggi();
+  corpo.push(tabella(["Fonte", "Risultati"], [
+    ["moneta", "testa " + c.moneta.T + "   croce " + c.moneta.C],
+    ["dado 1-4", Object.keys(c.dado).map(k => k + ": " + c.dado[k]).join("   ")],
+    ["tombola 1-8", Object.keys(c.tombola).map(k => k + ": " + c.tombola[k]).join("   ")]
+  ]));
+  const coer = s.coerente();
+  corpo.push(el("p", { style: "font-size:.8rem;margin:10px 0;" }, ["Controllo interno dei dati: ", el("span", { class: "pill " + (coer ? "pass" : "fail"), text: coer ? "OK" : "ERRORE" })]));
+  const stringa = s.bitstring();
+  const area = el("textarea", { class: "sequenza", readonly: "readonly", rows: "5", "aria-label": "Sequenza di bit", spellcheck: "false" });
+  area.value = stringa;
+  area.addEventListener("focus", () => area.select());
+  corpo.push(el("div", { class: "final-box" }, [
+    el("span", { class: "lbl", text: "La tua sequenza di bit (copiala da qui)" }), area,
+    el("span", { class: "lbl", style: "margin-top:8px;", text: "Lunghezza" }), el("span", { class: "val", text: stringa.length + " bit" }),
+    el("span", { class: "lbl", text: "Impronta di controllo (SHA-256): serve a verificare che una copia sia identica all'originale" }),
+    el("span", { class: "val", id: "impSeq", text: sha256Testo(stringa) })
+  ]));
+  corpo.push(boxStato(righeAvviso(s), "warn"));
+  if (stato.msg) { corpo.push(el("div", { style: "margin-top:10px;" }, [boxStato([stato.msg], "neutral")])); stato.msg = ""; }
+  if (stato.conferma) {
+    const k = el("div", { style: "margin-top:10px;" }); renderConferma(k); corpo.push(k);
+    radice.appendChild(scheda("Riepilogo finale", "esecuzione conclusa", corpo));
+    return;
+  }
+  const nome = el("input", { type: "text", id: "nomeFile", value: stato.baseNome, "aria-label": "Nome del file dei bit", autocomplete: "off", spellcheck: "false", style: "max-width:260px;" });
+  nome.addEventListener("input", () => { stato.baseNome = nome.value; });
+  corpo.push(el("div", { class: "row", style: "margin-top:12px;" }, [
+    el("label", { for: "nomeFile", text: "Nome del file (il registro prende lo stesso nome più _registro):" }), nome]));
+  corpo.push(el("div", { class: "row" }, [
+    el("button", { type: "button", id: "btnScaricaBit", text: "Scarica i bit", onclick: () => {
+      const [fb] = nomiFile(nome.value); scarica(fb, stringa); stato.salvato = true; stato.msg = "Scaricato " + fb; render(); } }),
+    el("button", { type: "button", id: "btnScaricaReg", text: "Scarica il registro", onclick: () => {
+      const [, fr] = nomiFile(nome.value);
+      scarica(fr, testoRegistro(s, stato.inizio, stato.fine || new Date(), sogliaOk, true)); stato.salvato = true; stato.msg = "Scaricato " + fr; render(); } }),
+    el("button", { type: "button", id: "btnCopia", text: "Copia i bit", onclick: () => copiaTesto(stringa, area) })
+  ]));
+  corpo.push(el("small", { class: "note", text: "I file contengono la tua sequenza: custodiscili con cura e cancellali quando non servono più." }));
+  corpo.push(el("div", { class: "row", style: "margin-top:10px;" }, [
+    el("button", { type: "button", class: "secondary", id: "btnAnnullaUltimo", text: "Annulla l'ultimo inserimento e continua", onclick: () => annulla(1) }),
+    el("button", { type: "button", class: "secondary", id: "btnNuova", text: "Nuova esecuzione", onclick: () => nuovaEsecuzione(false) })
+  ]));
+  radice.appendChild(scheda("Riepilogo finale", "esecuzione conclusa", corpo));
+}
+
+/* ------------------------------ preparazione ----------------------------- */
+function leggiConfigurazione() {
+  const q = id => document.getElementById(id);
+  const prof = (document.querySelector("input[name=prof]:checked") || {}).value || "2";
+  let profilo;
+  try {
+    if (prof === "4") {
+      const d = parseFloat(String(q("custD").value).replace(",", "."));
+      const p = parseFloat(String(q("custP").value).replace(",", "."));
+      if (!(d >= 0 && d <= 50)) return { errore: "Lo scostamento personalizzato deve stare tra 0 e 50." };
+      if (!(p >= 50 && p <= 60)) return { errore: "La probabilità della moneta deve stare tra 50 e 60." };
+      profilo = new Profilo("personalizzato", d / 100, p / 100);
+    } else profilo = PROFILI[prof];
+  } catch (e) { return { errore: e.message }; }
+  const num = id => { const t = String(q(id).value).trim(); return isIntStr(t) ? parseInt(t, 10) : NaN; };
+  const nd = num("nd"), nm = num("nm"), nt = num("nt");
+  if ([nd, nm, nt].some(x => Number.isNaN(x))) return { errore: "Gli inserimenti per giro devono essere numeri interi, 0 o più." };
+  if (nd + nm + nt === 0) return { errore: "Almeno una fonte deve essere maggiore di 0." };
+  const stop = (document.querySelector("input[name=stop]:checked") || {}).value || "1";
+  let modo, soglia;
+  if (stop === "1") { modo = "entropia"; soglia = num("sogliaH"); }
+  else if (stop === "2") { modo = "bit"; soglia = num("sogliaB"); }
+  else { modo = "nessuna"; soglia = 0; }
+  if (modo !== "nessuna" && !(soglia >= 1)) return { errore: "La soglia deve essere un numero intero, 1 o più." };
+  return { profilo, nd, nm, nt, modo, soglia };
+}
+function aggiornaInfoPrep() {
+  const box = document.getElementById("infoPrep"), btn = document.getElementById("btnInizia");
+  if (!box) return;
+  box.textContent = "";
+  const cfg = leggiConfigurazione();
+  if (cfg.errore) { box.appendChild(boxStato([cfg.errore], "warn")); btn.disabled = true; return; }
+  btn.disabled = !!window.__controlliFalliti;
+  if (cfg.profilo.biasRel === 0 && cfg.profilo.pSame === 0.5)
+    box.appendChild(boxStato(["ATTENZIONE: «solo prova» non tiene conto di nessuno squilibrio. Non usarlo per una chiave vera."], "warn"));
+  const hc = hCiclo(cfg.profilo, cfg.nd, cfg.nm, cfg.nt), bc = bitCiclo(cfg.nd, cfg.nm, cfg.nt);
+  box.appendChild(el("p", { style: "font-size:.82rem;margin:10px 0 6px;" }, ["Ogni giro ti dà " + bc + " bit e circa " + hc.toFixed(1) + " bit sicuri. Per ricavare una chiave da 256 bit servono:"]));
+  box.appendChild(tabella(["Obiettivo", "Bit sicuri", "Giri", "Bit grezzi"],
+    TARGET_SUGGERITI.map(([t, etichetta]) => { const c = ciclPer(t, hc); return [etichetta, t, c, c * bc]; })));
+  const extra = [];
+  if (cfg.modo === "entropia" && cfg.soglia < 256) extra.push("ATTENZIONE: con meno di 256 bit sicuri non puoi ricavare una chiave da 256 bit.");
+  if (cfg.modo === "bit") extra.push("Con " + cfg.soglia + " bit raccolti avrai circa " + (cfg.soglia * hc / bc).toFixed(0) + " bit sicuri.");
+  if (extra.length) box.appendChild(el("div", { style: "margin-top:8px;" }, [boxStato(extra, "warn")]));
+  box.appendChild(el("div", { style: "margin-top:8px;" }, [boxStato(righeRipetizioni(cfg), "neutral")]));
+}
+function renderPrep(radice) {
+  radice.appendChild(banner());
+  const onCh = () => aggiornaInfoPrep();
+  const radio = (nome, valore, testo) => el("label", { class: "opz" }, [el("input", { type: "radio", name: nome, value: valore, onchange: onCh }), testo]);
+  const campoNum = (id, valore, testo, extra) => el("div", { class: "campo" }, [
+    el("label", { for: id, text: testo }),
+    el("input", Object.assign({ type: "number", id, value: valore, step: "1", inputmode: "numeric", oninput: onCh }, extra || {}))]);
+  const box1 = el("div", { class: "source-box" }, [
+    el("h3", { text: "1) Quanto vuoi essere prudente?" }),
+    el("p", { text: "Dadi, monete e palline reali non sono mai perfetti. Più sei prudente, più lanci servono." }),
+    radio("prof", "1", "solo prova"), radio("prof", "2", "prudente (consigliato)"),
+    radio("prof", "3", "molto prudente"), radio("prof", "4", "personalizzato"),
+    campoNum("custD", "5", "Di quanto può essere «truccato» un dado o una pallina? In percentuale da 0 a 50 (consigliato: 5)", { min: "0", max: "50", step: "any", inputmode: "decimal" }),
+    campoNum("custP", "51", "Su 100 lanci, quante volte la moneta ricade sulla faccia da cui è partita? Da 50 a 60 (consigliato: 51)", { min: "50", max: "60", step: "any", inputmode: "decimal" })
+  ]);
+  const box2 = el("div", { class: "source-box" }, [
+    el("h3", { text: "2) Quanti inserimenti per ogni giro?" }),
+    el("p", { text: "Un giro è una serie di lanci ed estrazioni sempre uguale. In ogni giro inserirai PRIMA tutte le monete, POI tutti i dadi, POI tutte le tombole; finito il giro, se servono altri bit, il giro si ripete. Scrivi 0 per saltare una fonte. Per il dado contano solo i lanci validi (1-4): con 5 o 6 si rilancia." }),
+    campoNum("nm", "1", "Lanci di MONETA per giro", { min: "0" }),
+    campoNum("nd", "1", "Lanci validi di DADO per giro", { min: "0" }),
+    campoNum("nt", "1", "Estrazioni di TOMBOLA per giro", { min: "0" })
+  ]);
+  const box3 = el("div", { class: "source-box" }, [
+    el("h3", { text: "3) Quando vuoi fermarti?" }),
+    radio("stop", "1", "quando ho abbastanza bit sicuri (consigliato)"),
+    campoNum("sogliaH", String(TARGET_DEFAULT), "Quanti bit sicuri vuoi? (consigliato: " + TARGET_DEFAULT + ")", { min: "1" }),
+    radio("stop", "2", "dopo un certo numero di bit (la versione 1 usava " + BIT_DEFAULT + ")"),
+    campoNum("sogliaB", String(BIT_DEFAULT), "Quanti bit vuoi raccogliere?", { min: "1" }),
+    radio("stop", "3", "quando lo dico io, scrivendo «fine»")
+  ]);
+  const corpo = [
+    el("p", { class: "testo", text: "Questa pagina trasforma i tuoi lanci di dado e di moneta e le tue estrazioni della tombola in una lunga sequenza di 0 e 1. Ti dice anche quanti «bit sicuri» hai raccolto: più sono, meglio è." }),
+    el("div", { class: "grid4" }, [box1, box2]), el("div", { class: "grid4", style: "grid-template-columns:1fr;" }, [box3]),
+    el("div", { id: "infoPrep", "aria-live": "polite" }),
+    el("div", { class: "row", style: "margin-top:12px;" }, [
+      el("button", { type: "button", id: "btnInizia", text: "Inizia", onclick: () => {
+        const cfg = leggiConfigurazione();
+        if (cfg.errore) return;
+        stato.cfg = cfg; stato.s = new Sessione(cfg.profilo, cfg.nd, cfg.nm, cfg.nt, cfg.modo, cfg.soglia);
+        stato.inizio = new Date(); stato.fine = null; stato.msg = ""; stato.termina = false; stato.undoCount = 0;
+        stato.salvato = false; stato.schermata = "run"; render(); } })])
+  ];
+  radice.appendChild(scheda("Preparazione", "3 domande", corpo));
+  radice.querySelector("input[name=prof][value='2']").checked = true;
+  radice.querySelector("input[name=stop][value='1']").checked = true;
+  aggiornaInfoPrep();
+}
+
+function render() {
+  const radice = document.getElementById("schermo");
+  radice.textContent = "";
+  if (stato.schermata === "prep") renderPrep(radice);
+  else if (stato.schermata === "run") renderRun(radice);
+  else renderFine(radice);
+  if (window.__controlliFalliti)
+    radice.insertBefore(el("div", { class: "status fail", style: "margin-bottom:14px;", text: "ATTENZIONE: un controllo all'avvio è fallito: non usare questa pagina (vedi sotto)." }), radice.firstChild);
+}
+window.addEventListener("beforeunload", ev => {
+  if (stato.s && stato.s.esiti.length > 0 && !stato.salvato) { ev.preventDefault(); ev.returnValue = ""; }
+});
+
+/* ------------------------------ controlli all'avvio ---------------------- */
+function eseguiControlli() {
+  const out = [];
+  const chk = (nome, cond) => { let ok = false; try { ok = !!cond(); } catch (e) { ok = false; } out.push({ nome, ok }); };
+  chk("SHA-256 di «abc» (vettore NIST)", () => sha256Testo("abc") === "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+  chk("SHA-256 della stringa vuota (vettore NIST)", () => sha256Testo("") === "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+  chk("SHA-256 di 448 bit (vettore NIST)", () => sha256Testo("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq") === "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1");
+  chk("Conversione del dado: 1→00, 2→01, 3→10, 4→11", () => {
+    const s = new Sessione(PROFILI["2"], 4, 0, 0, "nessuna", 0); const bits = [];
+    for (let v = 1; v <= 4; v++) { processaSu(s, "dado", String(v)); }
+    return s.bitstring() === "00011011" && bits.length === 0; });
+  chk("Conversione della tombola: da 1 a 8 → da 000 a 111", () => {
+    const s = new Sessione(PROFILI["2"], 0, 0, 8, "nessuna", 0);
+    for (let v = 1; v <= 8; v++) processaSu(s, "tombola", String(v));
+    return s.bitstring() === "000001010011100101110111"; });
+  chk("Conversione della moneta: T→0, C→1", () => {
+    const s = new Sessione(PROFILI["2"], 0, 2, 0, "nessuna", 0); processaSu(s, "moneta", "T"); processaSu(s, "moneta", "C");
+    return s.bitstring() === "01"; });
+  chk("Il dado con 5 o 6 non aggiunge bit e viene registrato come rilancio", () => {
+    const s = new Sessione(PROFILI["2"], 1, 0, 0, "nessuna", 0); processaSu(s, "dado", "5"); processaSu(s, "dado", "6");
+    return s.bitstring() === "" && s.rilanci.length === 2; });
+  chk("Modello, profilo prudente: dado 1,8931, moneta 0,9714, tombola 2,9296, giro 5,7941", () => {
+    const p = PROFILI["2"];
+    return p.hDado().toFixed(4) === "1.8931" && p.hMoneta().toFixed(4) === "0.9714" && p.hTombola().toFixed(4) === "2.9296" && hCiclo(p, 1, 1, 1).toFixed(4) === "5.7941"; });
+  chk("Giri per 320, 384 e 416 bit sicuri nei tre profili (54-64-70, 56-67-72, 58-69-75)", () => {
+    const att = { "1": [54, 64, 70], "2": [56, 67, 72], "3": [58, 69, 75] };
+    return ["1", "2", "3"].every(k => JSON.stringify([320, 384, 416].map(t => ciclPer(t, hCiclo(PROFILI[k], 1, 1, 1)))) === JSON.stringify(att[k])); });
+  chk("Quante volte ripetere: 360 bit → 4, 402 bit → 3, 1200 bit → 1, 6 bit → 200", () =>
+    ripetizioniNecessarie(1200, 360) === 4 && ripetizioniNecessarie(1200, 402) === 3 && ripetizioniNecessarie(1200, 1200) === 1 && ripetizioniNecessarie(1200, 6) === 200);
+  chk("Sessione di prova con annullamento: stessi bit del programma Python (010110111001)", () => {
+    const s = new Sessione(PROFILI["2"], 1, 1, 1, "bit", 12);
+    processaSu(s, "moneta", "T"); processaSu(s, "dado", "3"); processaSu(s, "tombola", "7");
+    processaSu(s, "moneta", "C"); processaSu(s, "dado", "5"); processaSu(s, "dado", "2");
+    const dopo2 = s.undo(1);
+    const sl = s.slot();
+    processaSu(s, "dado", "4"); processaSu(s, "tombola", "2");
+    return dopo2 === 1 && sl.tipo === "dado" && sl.i === 0 && s.bitstring() === "010110111001" && s.completato() && s.coerente(); });
+  chk("Ordine di inserimento di un giro: prima le monete, poi i dadi, poi le tombole", () => {
+    const s = new Sessione(PROFILI["2"], 2, 3, 1, "nessuna", 0); const seq = [];
+    for (let k = 0; k < 12; k++) { const t = s.slot().tipo; seq.push(t[0]); processaSu(s, t, t === "moneta" ? "T" : "1"); }
+    return seq.join("") === "mmmddtmmmddt"; });
+  chk("Annullamento: la posizione nel giro non si sfasa (3000 passi casuali, 0 incoerenze)", () => {
+    let seed = 12345; const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+    const s = new Sessione(PROFILI["2"], 2, 1, 3, "nessuna", 0);
+    for (let k = 0; k < 3000; k++) {
+      const r = rnd();
+      if (r < 0.75) { const t = s.slot().tipo; processaSu(s, t, t === "dado" ? String(1 + Math.floor(rnd() * 4)) : t === "moneta" ? (rnd() < 0.5 ? "T" : "C") : String(1 + Math.floor(rnd() * 8))); }
+      else if (r < 0.85) s.rilancio(5);
+      else s.undo(1 + Math.floor(rnd() * 25));
+      const atteso = [].concat(...s.fasi.map(f => Array(f[1]).fill(f[0])));
+      if (!s.coerente() || s.slot().tipo !== atteso[s.esiti.length % s.lunghCiclo]) return false;
+    }
+    return true; });
+  chk("Registro: contiene nota, cronologia, coerenza OK e SHA-256 della sequenza", () => {
+    const s = new Sessione(PROFILI["2"], 1, 1, 1, "bit", 6);
+    processaSu(s, "moneta", "C"); processaSu(s, "dado", "1"); processaSu(s, "tombola", "3");
+    const d = new Date(2026, 9, 2, 12, 0, 0), r = testoRegistro(s, d, d, true, true);
+    return r.includes("NON basta") && r.includes("Coerenza cronologia/esiti: OK") && r.includes("SHA-256 della stringa di bit: " + sha256Testo("100010")) && r.includes("2026-10-02 12:00:00"); });
+  chk("Nome dei file: «bits.txt» → bits_registro.txt; nomi con caratteri strani resi sicuri", () => {
+    const a = nomiFile("bits.txt"), b = nomiFile("a b/c.txt"), c = nomiFile("");
+    return a[0] === "bits.txt" && a[1] === "bits_registro.txt" && b[0] === "a_b_c.txt" && c[0] === "bits.txt"; });
+  return out;
+}
+/* inserimento "come dalla tastiera" su una sessione qualsiasi, per i controlli */
+function processaSu(sess, tipo, testo) {
+  const salva = stato.s, msg = stato.msg;
+  stato.s = sess;
+  try { processa(tipo, testo); } finally { stato.s = salva; stato.msg = msg; }
+}
+function mostraControlli() {
+  const risultati = eseguiControlli();
+  const ok = risultati.filter(r => r.ok).length;
+  window.__controlliFalliti = ok !== risultati.length;
+  const badge = document.getElementById("controlliTitolo"), elenco = document.getElementById("controlliElenco");
+  badge.textContent = ok + " su " + risultati.length + " superati";
+  elenco.textContent = "";
+  const t = el("table", { class: "esiti" });
+  t.appendChild(el("tr", null, [el("th", { text: "Controllo" }), el("th", { text: "Esito" })]));
+  for (const r of risultati) t.appendChild(el("tr", null, [el("td", { text: r.nome }),
+    el("td", null, [el("span", { class: "pill " + (r.ok ? "pass" : "fail"), text: r.ok ? "PASS" : "FAIL" })])]));
+  elenco.appendChild(t);
+  return risultati;
+}
+function mostraImpronta() {
+  const blocco = document.getElementById("core-script").textContent;
+  document.getElementById("impronta").textContent = sha256Testo(blocco);
+}
+
+mostraControlli();
+mostraImpronta();
+render();
+</script>
+</body>
+</html>
