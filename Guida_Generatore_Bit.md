@@ -1,13 +1,13 @@
-# Guida: Generatore di bit da fonti fisiche (versione 2.8)
+# Guida: Generatore di bit da fonti fisiche (versione 2.9-beta)
 
 **Documento pensato per chi non ha alcuna conoscenza precedente dell'argomento.**
 Descrive il contesto, le regole, il modello di stima e l'uso del programma `generatore_bit.py`.
 
-> **Da solo questo programma non basta.** I bit che produce vanno uniti ad altre sorgenti **indipendenti** con **EntropyPipeline**, lo strumento della suite entropy-suite che li estrae con Peres e Toeplitz, **nella versione v2.0.0-beta6 o successiva**. Il programma non produce una chiave, e da solo non è sufficiente per ricavarne una.
+> **Da solo questo programma non basta.** I bit che produce vanno uniti ad altre sorgenti **indipendenti** con **EntropyPipeline**, lo strumento della suite entropy-suite che li estrae con Peres e Toeplitz, **nella versione v2.0.0-beta6 o successiva**. Il programma non produce una chiave, e da solo non è sufficiente per ricavarne una. **Non è un generatore casuale per uso crittografico (CSPRNG):** i «bit stimati» sono una stima con un modello prudente, non una prova di casualità.
 
 **Verifica dei file.** Il programma `generatore_bit.py` di questa versione ha SHA-256:
 
-`f26491a567a81e1c964f7560b0480e3600b28b544ea8e6d0da8b08fd3fb9bdfc`
+`337b4c07031d435cbf41555d1b2b08c4469ac35083f34507349831a8960b60a1`
 
 Controllalo con `sha256sum generatore_bit.py` (Linux/Mac) prima di usarlo.
 
@@ -24,7 +24,7 @@ Questo programma ti fa inserire i risultati di lanci ed estrazioni reali e li co
 **Parole usate dal programma e da questa guida:**
 - **giro** = una serie di lanci ed estrazioni sempre uguale, che si ripete (nella versione 1 e nel codice si chiamava "ciclo"); in ogni giro si inseriscono **prima tutte le monete, poi tutti i dadi, poi tutte le tombole**, nelle quantità scelte all'avvio;
 - **esito** = ciò che è uscito da un singolo lancio valido o da una singola estrazione (sullo schermo si chiama "inserimento");
-- **bit sicuri** = la stima prudente di quanto sono imprevedibili i bit raccolti; il termine tecnico è **min-entropia**.
+- **bit stimati** = la stima prudente di quanto sono imprevedibili i bit raccolti; il termine tecnico è **min-entropia**.
 
 ---
 
@@ -41,6 +41,8 @@ Questo programma ti fa inserire i risultati di lanci ed estrazioni reali e li co
 | 5 o 6 | **rilancia**, nessun bit |
 
 Le quattro facce accettate hanno la stessa probabilità, quindi ogni lancio valido vale 2 bit. La versione 1 ne ricavava solo 1 per lancio: la resa del dado è raddoppiata.
+
+**Attenzione alla procedura operativa.** Il testo `procedura operativa` del repository `document` consiglia per il dado una mappatura a 1 bit (le facce 1 e 2 danno 0, le facce 3 e 4 danno 1, con 5 e 6 rilancio). Questo programma e la pagina HTML usano invece **2 bit** per lancio valido (tabella qui sopra). Per una sessione fatta con il Generatore vale la mappatura a 2 bit: chi converte a mano gli stessi lanci con la mappatura a 1 bit ottiene bit diversi.
 
 ### 2.2 Moneta (1 bit per lancio)
 
@@ -82,9 +84,9 @@ L'annullamento serve **solo** per correggere un errore di battitura. Annullare u
 
 ---
 
-## 4. Stima prudente dei bit sicuri (min-entropia)
+## 4. Stima prudente dei bit (min-entropia)
 
-Il programma non conta solo i bit: stima quanti **bit sicuri** contengono (in termini tecnici, la **min-entropia**), cioè quanto è difficile indovinarli nel caso peggiore, se la sorgente fosse un po' sbilanciata. Un bit prodotto da un dado leggermente sbilanciato vale meno di 1 bit sicuro. Sullo schermo la scelta si chiama «Quanto vuoi essere prudente?».
+Il programma non conta solo i bit: stima quanti **bit stimati** contengono (in termini tecnici, la **min-entropia**), cioè quanto è difficile indovinarli nel caso peggiore, se la sorgente fosse un po' sbilanciata. Un bit prodotto da un dado leggermente sbilanciato vale meno di 1 bit stimato. Sullo schermo la scelta si chiama «Quanto vuoi essere prudente?».
 
 **Modello usato (ipotesi di lavoro, dichiarate):**
 1. Ogni lancio o estrazione è **indipendente** dagli altri e da fonti diverse.
@@ -112,17 +114,17 @@ Il programma non conta solo i bit: stima quanti **bit sicuri** contengono (in te
 
 All'avvio scegli uno dei tre modi:
 
-1. **Quando ho abbastanza bit sicuri** (consigliata; valore proposto 384). Il programma si ferma, a fine giro, quando la stima raggiunge il valore scelto.
-2. **Dopo un certo numero di bit** (valore proposto 480, come nella versione 1). Il programma mostra quanti bit sicuri corrispondono.
+1. **Quando ho abbastanza bit stimati** (consigliata; valore proposto 384). Il programma si ferma, a fine giro, quando la stima raggiunge il valore scelto.
+2. **Dopo un certo numero di bit** (valore proposto 480, come nella versione 1). Il programma mostra quanti bit stimati corrispondono.
 3. **Quando lo dico io**, scrivendo `fine`.
 
-**Soglie di bit sicuri (min-entropia) suggerite per ricavare una chiave da 256 bit.** Con un estrattore di tipo Toeplitz la min-entropia in ingresso deve essere almeno la lunghezza d'uscita più 2·log2(1/ε), dove ε è l'errore ammesso. Per 256 bit d'uscita:
+**Soglie di bit stimati (min-entropia) suggerite per ricavare una chiave da 256 bit.** Con un estrattore di tipo Toeplitz la min-entropia in ingresso deve essere almeno la lunghezza d'uscita più 2·log2(1/ε), dove ε è l'errore ammesso. Per 256 bit d'uscita:
 
 | Soglia | Etichetta sullo schermo | Errore ammesso ε |
 |---|---|---|
 | 320 bit | minimo | 2^-32 |
 | 384 bit | consigliato | 2^-64 |
-| 416 bit | più sicuro | 2^-80 |
+| 416 bit | più prudente | 2^-80 |
 
 **Quanti giri servono** (un giro = 1 moneta + 1 lancio valido di dado + 1 pallina = 6 bit grezzi):
 
@@ -130,14 +132,14 @@ All'avvio scegli uno dei tre modi:
 |---|---|---|---|---|
 | 320 (minimo) | 2^-32 | 54 giri (324 bit) | 56 giri (336 bit) | 58 giri (348 bit) |
 | 384 (consigliato) | 2^-64 | 64 giri (384 bit) | 67 giri (402 bit) | 69 giri (414 bit) |
-| 416 (piu' sicuro) | 2^-80 | 70 giri (420 bit) | 72 giri (432 bit) | 75 giri (450 bit) |
+| 416 (piu' prudente) | 2^-80 | 70 giri (420 bit) | 72 giri (432 bit) | 75 giri (450 bit) |
 
-**Confronto con la versione 1.** La soglia di 480 bit grezzi richiedeva 96 giri (5 bit per giro, dado a 1 bit), corrispondenti nel profilo prudente a circa 464 bit sicuri stimati, cioè più di quanto serva per le soglie sopra, e circa 336 azioni fisiche (contando i rilanci del dado, in media 1,5 lanci per esito valido). Con la soglia di 384 bit nel profilo prudente servono 67 giri, circa 234 azioni fisiche: circa 30% in meno, mantenendo ε = 2^-64 nel modello.
+**Confronto con la versione 1.** La soglia di 480 bit grezzi richiedeva 96 giri (5 bit per giro, dado a 1 bit), corrispondenti nel profilo prudente a circa 464 bit stimati, cioè più di quanto serva per le soglie sopra, e circa 336 azioni fisiche (contando i rilanci del dado, in media 1,5 lanci per esito valido). Con la soglia di 384 bit nel profilo prudente servono 67 giri, circa 234 azioni fisiche: circa 30% in meno, mantenendo ε = 2^-64 nel modello.
 
 ### Quante volte ripetere l'esecuzione se usi solo il Generatore
 
 Se decidi di usare **solo** il Generatore, senza altre sorgenti esterne e indipendenti, **EntropyPipeline v2.0.0-beta6 o successiva** chiede circa **1200 bit** per ricavare 256 bit (circa 200 giri da 6 bit). Il programma lo scrive chiaramente, due volte:
-- **all'avvio**, dopo aver scelto la soglia, in base ai bit di una esecuzione: per esempio con 60 giri (360 bit) dice «va eseguito 4 VOLTE in tutto»; con la soglia di 384 bit sicuri (67 giri, 402 bit) dice 3 volte; con 1200 bit basta una volta;
+- **all'avvio**, dopo aver scelto la soglia, in base ai bit di una esecuzione: per esempio con 60 giri (360 bit) dice «va eseguito 4 VOLTE in tutto»; con la soglia di 384 bit stimati (67 giri, 402 bit) dice 3 volte; con 1200 bit basta una volta;
 - **a fine esecuzione**, in base ai bit realmente raccolti, con quante ne mancano. Vale anche quando la fine è decisa da te con `fine`.
 
 Il programma **non** ripete da solo l'esecuzione: ogni esecuzione è una sessione a sé, anche in giorni diversi. Salva ogni volta con un nome diverso (per esempio `bits_1.txt`, `bits_2.txt`) e incolla i bit di tutte, una dopo l'altra, nella **stessa** finestra di EntropyPipeline. In una prova su 150 casi simulati stimare spezzoni corti a parte, invece che in fila, ha reso dal 19% al 23% in meno; l'ordine invece non cambia nulla. Con altre sorgenti indipendenti ne servono meno: lo dice la Fase 4 di EntropyPipeline.
@@ -157,7 +159,7 @@ Il programma **non** ripete da solo l'esecuzione: ogni esecuzione è una session
 1. **Preparazione.** Prima di tutto un avviso: da solo il programma non basta. Poi tre domande: «Quanto vuoi essere prudente?»; «Quanti inserimenti per ogni giro?» (moneta, dado valido, tombola; 0 = salta); «Quando vuoi fermarti?». Dopo l'ultima il programma scrive quante volte va ripetuta l'esecuzione se usi solo il Generatore (con EntropyPipeline v2.0.0-beta6 o successiva). Il programma mostra quanti giri servono per le soglie suggerite.
 2. **Giri.** Ogni giro chiede nell'ordine moneta, dado, tombola: prima tutte le monete del giro, poi tutti i dadi, poi tutte le tombole, nelle quantità scelte all'avvio (anche diverse tra loro); finito il giro, se la soglia non è raggiunta, il giro si ripete nello stesso ordine. La posizione nel giro è sempre ricavata dagli esiti presenti: l'annullamento non può sfasarla (difetto della versione 1 corretto).
 3. **Fine.** A fine giro, se la soglia è raggiunta, compare il riepilogo con la stringa di bit, conteggi per faccia, rilanci e SHA-256. Con `INVIO` confermi; con `u` annulli l'ultimo esito e riprendi.
-4. **Schermo fisso.** Ogni inserimento ridisegna lo schermo con bit raccolti, bit sicuri (stima), barra di avanzamento, la prudenza scelta (solo il nome in maiuscolo, per esempio PRUDENTE), «Ora tocca a», ultimi 12 bit e un breve promemoria dei comandi. La riga «Ora tocca a» è evidenziata, senza usare colori, per non confondere le fonti: il nome (MONETA, DADO, TOMBOLA) compare in negativo (colori invertiti rispetto al terminale) e in grassetto, racchiuso da ► ◄; la parola davanti al punto in cui scrivi («Moneta →», «Dado →», «Tombola →») è in negativo allo stesso modo. Nel riepilogo finale la sequenza di bit è evidenziata in giallo (testo nero su sfondo giallo): la selezione e la copia del testo non ne risentono. Il giallo non compare se è impostata la variabile `NO_COLOR` (per esempio `NO_COLOR=1 python3 generatore_bit.py`); fuori da un terminale vero, o con `TERM=dumb`, non compare nessuna evidenziazione e restano i simboli ► ◄.
+4. **Schermo fisso.** Ogni inserimento ridisegna lo schermo con bit raccolti, bit stimati (stima), barra di avanzamento, la prudenza scelta (solo il nome in maiuscolo, per esempio PRUDENTE), «Ora tocca a», ultimi 12 bit e un breve promemoria dei comandi. La riga «Ora tocca a» è evidenziata, senza usare colori, per non confondere le fonti: il nome (MONETA, DADO, TOMBOLA) compare in negativo (colori invertiti rispetto al terminale) e in grassetto, racchiuso da ► ◄; la parola davanti al punto in cui scrivi («Moneta →», «Dado →», «Tombola →») è in negativo allo stesso modo. Nel riepilogo finale la sequenza di bit è evidenziata in giallo (testo nero su sfondo giallo): la selezione e la copia del testo non ne risentono. Il giallo non compare se è impostata la variabile `NO_COLOR` (per esempio `NO_COLOR=1 python3 generatore_bit.py`); fuori da un terminale vero, o con `TERM=dumb`, non compare nessuna evidenziazione e restano i simboli ► ◄.
 
 ### Comandi (in qualsiasi momento durante gli inserimenti)
 
@@ -178,9 +180,10 @@ Il rilancio del dado (5 o 6) non è un esito e non si annulla. Nella configurazi
 - Avvio: `python3 generatore_bit.py`
 
 **Stato delle prove di questa versione.**
-- Provata su Linux (Python 3.12.3), con terminale simulato (pseudo-terminale) e con ingresso da pipe. La lettura dei tasti è identica dalla 2.4 alla 2.8: con la 2.4 sono stati provati Invio, Canc, Backspace, Esc, frecce e tasti ravvicinati; dalla 2.5 in poi sono stati ripetuti solo Invio, Canc e Backspace.
-- **Non provata** su Mac e su Windows. Su Windows il codice usa un'altra via per la lettura dei tasti (`msvcrt`) mai eseguita. La versione 1 non poteva funzionare su Windows (usava solo moduli Linux/Mac).
-- Dalla 2.0 alla 2.4 la parte di calcolo (conversioni, stima dei bit sicuri, posizione nel giro) è la stessa: la prova al terminale con l'ordine di inserimento di allora dava gli stessi bit e lo stesso SHA-256 della 2.0; la 2.1 ha cambiato solo i testi, la 2.3 aggiunge l'avviso «da solo non basta» e l'indicazione di quante volte ripetere l'esecuzione, la 2.4 riferisce tutto a EntropyPipeline v2.0.0-beta6 o successiva (18 prove automatiche su: 60 giri, soglia in bit sicuri, esecuzione unica, fine manuale, esecuzione da 12 bit, esecuzione da oltre 1200 bit, indicazione della versione della pagina sullo schermo e nel registro). La 2.5 cambia l'ordine di inserimento in ogni giro (moneta, dado, tombola invece di dado, moneta, tombola): conversioni, stima dei bit sicuri, soglie e numeri di giri sono invariati, ma a parità di lanci la sequenza di bit è diversa da quella delle versioni precedenti. Prove della 2.5: calcolo identico alla 2.4 (8.241 controlli su profili, quantità per giro e soglie); ordine, bit, annullamenti e soglia a fine giro in 400 sessioni casuali (280.000 passi, confrontate con un modello indipendente); esecuzione completa con ingresso da pipe e con terminale simulato (Backspace e Canc); confronto con la stima della pagina EntropyPipeline v2.0.0-beta6 su 1200 bit simulati (fonti ideali, moneta al 51%, 600 prove accoppiate): il nuovo ordine accredita da 1,6 a 4,0 bit in meno su circa 699, differenza entro un errore standard (4,4-4,6 bit), quindi non distinguibile da zero. La 2.7 evidenzia la riga «Ora tocca a» in negativo (nome della fonte a colori invertiti, senza usare colori) e la sequenza finale di bit in giallo; nessun cambiamento nei calcoli e nei bit. Prove della 2.7: tutte quelle della 2.5 ripetute; in modo pipe nessun codice di formattazione, solo i simboli ► ◄; con terminale simulato compaiono il negativo per moneta, dado e tombola e il giallo sulla sequenza finale, e nessun altro colore; con `NO_COLOR=1` resta il negativo ma non il giallo; con `TERM=dumb` non compare nessun codice. L'aspetto è stato controllato disegnando i codici catturati in un browser, **non** su un terminale vero: il negativo e il giallo esatti dipendono dalla tavolozza del tuo terminale. La 2.8 mostra la scelta di prudenza solo con il nome in maiuscolo, senza l'etichetta «Prudenza:» (nessun cambiamento nei calcoli e nei bit). Prove della 2.8: tutte quelle della 2.7 ripetute, più il controllo delle quattro scelte (SOLO PROVA, PRUDENTE, MOLTO PRUDENTE, PERSONALIZZATO) in ogni schermata.
+- Provata su Linux (Python 3.12.3), con terminale simulato (pseudo-terminale) e con ingresso da pipe. La lettura dei tasti è identica dalla 2.4 alla 2.9-beta: con la 2.4 sono stati provati Invio, Canc, Backspace, Esc, frecce e tasti ravvicinati; dalla 2.5 in poi sono stati ripetuti solo Invio, Canc e Backspace.
+- **Provata su Windows** dall'autore il 05/10/2026 (Python 3.14.8, PowerShell 5): lettura dei tasti con `msvcrt` (Invio, Canc, Backspace), annullamenti, salvataggio e registro, aspetto di negativo e giallo. **Non provata su Mac.** La versione 1 non poteva funzionare su Windows (usava solo moduli Linux/Mac).
+- Dalla 2.0 alla 2.4 la parte di calcolo (conversioni, stima prudente della min-entropia, posizione nel giro) è la stessa: la prova al terminale con l'ordine di inserimento di allora dava gli stessi bit e lo stesso SHA-256 della 2.0; la 2.1 ha cambiato solo i testi, la 2.3 aggiunge l'avviso «da solo non basta» e l'indicazione di quante volte ripetere l'esecuzione, la 2.4 riferisce tutto a EntropyPipeline v2.0.0-beta6 o successiva (18 prove automatiche su: 60 giri, soglia in bit stimati, esecuzione unica, fine manuale, esecuzione da 12 bit, esecuzione da oltre 1200 bit, indicazione della versione della pagina sullo schermo e nel registro). La 2.5 cambia l'ordine di inserimento in ogni giro (moneta, dado, tombola invece di dado, moneta, tombola): conversioni, stima dei bit stimati, soglie e numeri di giri sono invariati, ma a parità di lanci la sequenza di bit è diversa da quella delle versioni precedenti. Prove della 2.5: calcolo identico alla 2.4 (8.241 controlli su profili, quantità per giro e soglie); ordine, bit, annullamenti e soglia a fine giro in 400 sessioni casuali (280.000 passi, confrontate con un modello indipendente); esecuzione completa con ingresso da pipe e con terminale simulato (Backspace e Canc); confronto con la stima della pagina EntropyPipeline v2.0.0-beta6 su 1200 bit simulati (fonti ideali, moneta al 51%, 600 prove accoppiate): il nuovo ordine accredita da 1,6 a 4,0 bit in meno su circa 699, differenza entro un errore standard (4,4-4,6 bit), quindi non distinguibile da zero. La 2.7 evidenzia la riga «Ora tocca a» in negativo (nome della fonte a colori invertiti, senza usare colori) e la sequenza finale di bit in giallo; nessun cambiamento nei calcoli e nei bit. Prove della 2.7: tutte quelle della 2.5 ripetute; in modo pipe nessun codice di formattazione, solo i simboli ► ◄; con terminale simulato compaiono il negativo per moneta, dado e tombola e il giallo sulla sequenza finale, e nessun altro colore; con `NO_COLOR=1` resta il negativo ma non il giallo; con `TERM=dumb` non compare nessun codice. L'aspetto è stato controllato disegnando i codici catturati in un browser, **non** su un terminale vero: il negativo e il giallo esatti dipendono dalla tavolozza del tuo terminale. La 2.8 mostra la scelta di prudenza solo con il nome in maiuscolo, senza l'etichetta «Prudenza:» (nessun cambiamento nei calcoli e nei bit). Prove della 2.8: tutte quelle della 2.7 ripetute, più il controllo delle quattro scelte (SOLO PROVA, PRUDENTE, MOLTO PRUDENTE, PERSONALIZZATO) in ogni schermata. Prove della 2.9-beta: tutte quelle della 2.8 rifatte con gli script della cartella `verifica/` (8 prove sul programma; sulla pagina 15 controlli, 1500 sessioni identiche al programma e 180.081 stringhe di input senza anomalie) più 24 prove di interfaccia in Chromium. Sul Raspberry Pi (05/10/2026, Python 3.13.5 e Node.js 20.19.2) gli script della cartella `verifica/` sono stati eseguiti con tutte le prove superate; **non è stata ancora provata la pagina aperta in Firefox sul Pi**. Su Windows, la pagina 2.9-beta in tre browser, con tre sessioni a risultato non noto in anticipo (l'atteso era calcolato da Claude e non rivelato): Edge (12 bit, un rilancio, un annullamento), Chrome (2 monete, 2 dadi e 1 tombola per giro, 18 bit, due rilanci, `testa` e `croce` scritti per esteso, un annullamento) e Firefox (profilo molto prudente, 1 moneta, 3 dadi e 2 tombole per giro, arresto manuale a metà giro con conferma, due rilanci, un annullamento). In tutte e tre sequenza o impronta SHA-256, bit stimati, rilanci, conteggi, ripetizioni e controllo interno coincidono con il modello, con 15 controlli su 15 e l'impronta del codice attesa. Il giallo è confermato nei tre browser; «Ora tocca a» in nero è confermato in Chrome e in Firefox, non in Edge (l'autore non lo ricorda). Nella prova in Firefox il testo copiato non conteneva la sequenza in chiaro, quindi la sequenza è confermata dall'impronta SHA-256. Su Windows, il 05/10/2026 (Python 3.14.8, PowerShell 5), il programma: gli script di `verifica/` (7 prove su 7; la prova con terminale simulato viene saltata perché serve Linux o Mac); una sessione interattiva a risultato non noto (profilo personalizzato, 2 monete, 1 dado e 2 tombole per giro, 30 bit, un rilancio, annullamenti con Canc e con `u`), con sequenza, SHA-256, bit stimati (anche i valori intermedi) e conteggi uguali al modello; il Backspace, provato a parte, annulla l'ultimo inserimento; input sbagliati gestiti; salvataggio verificato (l'impronta del file calcolata da Windows è uguale a quella del registro, quindi nessun a capo finale né conversioni); aspetto di «Ora tocca a» in negativo e della sequenza in giallo confermato.
+- Gli script di prova (ordine, bit, annullamenti, soglie, ingresso da pipe, terminale simulato, parità con la pagina HTML in Node.js, prova dell'input su centinaia di migliaia di stringhe) sono nella cartella `verifica/` del repository: vedi `verifica/LEGGIMI.md`. Si lanciano con `python3 verifica/esegui_tutto.py` e richiedono solo Python 3 e Node.js.
 - Se non c'è un terminale vero (pipe, redirezione) il programma funziona in modo riga per riga: CANC non è disponibile, si usano `u` e `uN`.
 
 ---
@@ -205,7 +208,7 @@ Al termine, se rispondi `s`, vengono creati due file nella cartella corrente:
 
 ## 9. Esempio
 
-Prudente, 1 moneta + 1 dado + 1 tombola per giro, 384 bit sicuri (servono 67 giri):
+Prudente, 1 moneta + 1 dado + 1 tombola per giro, 384 bit stimati (servono 67 giri):
 
 ```
 Lancio moneta → C      bit 1
@@ -241,7 +244,7 @@ Promemoria: non scegliere mai un esito; dado mescolato 3 secondi; palline reinse
 5. **Compatibilità**: non dipende più solo da `termios`; lettura tasti robusta (Esc da solo non blocca; Invio non si perde con tasti ravvicinati); funziona anche senza terminale.
 6. **Salvataggio** con permessi riservati, senza sovrascrittura, più registro di controllo con SHA-256.
 7. **Guida allineata al codice**; non riporta più un frammento del codice.
-8. **Versione 2.1: testi più semplici** (richiesta dopo la prima prova sul Raspberry Pi). Parole come «min-entropia», «ciclo», «esito» e «profilo» sullo schermo diventano «bit sicuri», «giro», «inserimento» e «prudenza»; messaggi di errore e istruzioni riscritti. Nessun cambiamento nei calcoli e nelle regole.
+8. **Versione 2.1: testi più semplici** (richiesta dopo la prima prova sul Raspberry Pi). Parole come «min-entropia», «ciclo», «esito» e «profilo» sullo schermo diventano «bit sicuri» (dalla 2.9-beta «bit stimati»), «giro», «inserimento» e «prudenza»; messaggi di errore e istruzioni riscritti. Nessun cambiamento nei calcoli e nelle regole.
 9. **Versione 2.3: avviso «da solo non basta» e indicazione delle ripetizioni.** Avviso all'avvio, nel riepilogo, nel registro e in questa guida; se usi solo il Generatore il programma scrive quante volte va ripetuta l'esecuzione (all'avvio e a fine esecuzione). Nessun giro automatico e nessun cambiamento nei calcoli e nelle regole.
 
 10. **Versione 2.4: tutto riferito a EntropyPipeline v2.0.0-beta6 o successiva.** Avvio, riepilogo, registro e guida indicano la versione della pagina a cui si riferiscono i numeri; sullo schermo resta scritto che con versioni precedenti i numeri non valgono. Nessun cambiamento nei calcoli e nelle regole.
@@ -254,12 +257,16 @@ Promemoria: non scegliere mai un esito; dado mescolato 3 secondi; palline reinse
 
 14. **Versione 2.8: la prudenza a schermo è solo il nome scelto.** Al posto della riga «Prudenza: prudente» compare soltanto il nome in maiuscolo (SOLO PROVA, PRUDENTE, MOLTO PRUDENTE o PERSONALIZZATO). Nessun cambiamento nei calcoli, nei bit e nelle regole; il registro continua a riportare il profilo e i suoi parametri.
 
+15. **Versione 2.9-beta: testi più prudenti.** (a) «bit sicuri» diventa **«bit stimati»** in tutto il programma, nella pagina, nel registro e in questa guida, perché «sicuri» dava un'impressione di garanzia che la stima non offre; anche «più sicuro» diventa «più prudente»; (b) nuovo avviso: non è un generatore casuale per uso crittografico (CSPRNG) e i bit stimati sono una stima con un modello prudente, non una prova di casualità; (c) nota sulla mappatura del dado a 2 bit contro il consiglio a 1 bit della procedura operativa; (d) pagina HTML: dichiarata la prova su Firefox e Raspberry Pi nella versione 2.8; (e) consiglio sugli appunti nei limiti noti; (f) cartella `verifica/` con gli script di prova, che ora stampano l'avanzamento e impostano da soli la codifica UTF-8; (g) documentato il limite dell'uscita reindirizzata. Nessun cambiamento nei calcoli, nei bit e nelle regole.
+
 ## 12. Limiti noti
 
 - La stima dipende da ipotesi (indipendenza, bias entro d) non verificabili con pochi lanci.
 - Nessuna estrazione (Peres, Toeplitz, hash) è eseguita da questo programma, e da solo non basta.
 - I 1200 bit proposti (circa 200 giri) vengono da simulazioni con EntropyPipeline v2.0.0-beta6 (pubblicata su GitHub il 04/10/2026) e con fonti ideali; con versioni precedenti i numeri non valgono; il programma non ripete da solo l'esecuzione.
 - Le stringhe e il registro restano visibili a schermo e nei file: usa una macchina e un ambiente di cui ti fidi.
-- Mac e Windows non provati.
+- Se l'uscita del programma viene reindirizzata (su un file o in una pipe) e il sistema usa una codifica che non è UTF-8 (su Windows cp1252 o cp850, su Linux `LANG=C`), il programma si ferma subito con `UnicodeEncodeError`, prima che sia stato inserito qualcosa. Nel terminale interattivo non succede (provato su Windows, PowerShell 5). Rimedio: imposta prima `PYTHONUTF8=1` (PowerShell: `$env:PYTHONUTF8="1"`; bash: `export PYTHONUTF8=1`). Gli script di `verifica/` lo impostano da soli. Verificato in simulazione su Linux con le codifiche cp1252 e cp850; non provato su un Windows reale senza `PYTHONUTF8`.
+- Se copi i bit negli appunti (pagina HTML), dopo averli incollati in EntropyPipeline copia qualcos'altro per svuotare gli appunti: i bit restano altrimenti nella memoria degli appunti del sistema.
+- Mac non provato; Windows provato in PowerShell 5, non in altri terminali.
 
 **Fine della guida.**

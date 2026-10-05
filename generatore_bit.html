@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
-<title>Generatore di bit — moneta, dado e tombola (v2.8, pagina HTML)</title>
+<title>Generatore di bit — moneta, dado e tombola (v2.9-beta, pagina HTML)</title>
 <style>
 :root{
   --bg:#f5f5f5; --card:#ffffff; --border:#ddd; --text:#222; --muted:#666;
@@ -90,7 +90,7 @@ h3 .negativo{font-size:1.05rem;padding:3px 12px;}
 <h1>Generatore di bit — moneta, dado e tombola</h1>
 <p class="subtitle">
   Standalone, offline, zero dipendenze esterne. Non invia e non salva nulla: se chiudi la pagina prima di scaricare i bit, vanno persi.<br>
-  Build <b>2.8</b> (pagina HTML, 2026-10-04) — <b>NON AUDITATA</b>, non ancora provata su Firefox e Raspberry Pi. Stessa logica del programma Python <code>generatore_bit.py</code> v2.8.
+  Build <b>2.9-beta</b> (pagina HTML, 2026-10-05) — <b>NON AUDITATA</b>. Provata su Firefox e Raspberry Pi nella versione 2.8 (04/10/2026). Stessa logica del programma Python <code>generatore_bit.py</code> v2.9-beta.
 </p>
 <noscript><div class="warning-banner">Questa pagina ha bisogno di JavaScript per funzionare.</div></noscript>
 <div id="schermo"></div>
@@ -107,11 +107,11 @@ h3 .negativo{font-size:1.05rem;padding:3px 12px;}
 <script id="core-script">
 "use strict";
 /* ==========================================================================
-   Generatore di bit da moneta, dado e tombola - pagina HTML (v2.8)
-   Stessa logica del programma Python generatore_bit.py v2.8: conversioni,
+   Generatore di bit da moneta, dado e tombola - pagina HTML (v2.9-beta)
+   Stessa logica del programma Python generatore_bit.py v2.9-beta: conversioni,
    stima prudente della min-entropia, soglie, annullamenti, registro.
    ========================================================================== */
-const VERSIONE = "2.8";
+const VERSIONE = "2.9-beta";
 const MAX_UNDO = 20;
 const RECENT_SHOW = 12;
 const BIT_DEFAULT = 480;
@@ -119,7 +119,7 @@ const TARGET_DEFAULT = 384;
 const TOTALE_DEFAULT = 1200;
 const EPS = 1e-9;
 const PIPELINE = "EntropyPipeline v2.0.0-beta6 o successiva";
-const TARGET_SUGGERITI = [[320, "minimo"], [384, "consigliato"], [416, "più sicuro"]];
+const TARGET_SUGGERITI = [[320, "minimo"], [384, "consigliato"], [416, "più prudente"]];
 const BITS_PER_ESITO = { dado: 2, moneta: 1, tombola: 3 };
 const ORDINE_FONTI = ["moneta", "dado", "tombola"];
 
@@ -325,7 +325,7 @@ function testoRegistro(sess, inizio, fine, sogliaOk, daPagina) {
   L.push("Comandi di annullamento: " + undoEv.length + " (esiti annullati in totale: " + nRim + ")");
   L.push("Rilanci del dado (5 o 6): " + sess.rilanci.length);
   L.push("Bit totali: " + sess.totalBits());
-  L.push("Bit sicuri stimati (min-entropia, modello prudente): " + sess.totalH().toFixed(2));
+  L.push("Bit stimati (min-entropia, modello prudente): " + sess.totalH().toFixed(2));
   if (sess.modo !== "nessuna") L.push("Soglia raggiunta: " + (sogliaOk ? "si" : "NO"));
   L.push("Coerenza cronologia/esiti: " + (sess.coerente() ? "OK" : "ERRORE"));
   L.push("SHA-256 della stringa di bit: " + sha256Testo(sess.bitstring()));
@@ -414,7 +414,7 @@ function comandoFine() {
   if (s.esiti.length === 0) { stato.msg = "Non hai ancora inserito niente: non c'è nulla da concludere"; return; }
   const avvisi = [];
   if (s.modo !== "nessuna" && !s.sogliaRaggiunta())
-    avvisi.push("non hai ancora raggiunto l'obiettivo (bit sicuri stimati: " + s.totalH().toFixed(1) + ")");
+    avvisi.push("non hai ancora raggiunto l'obiettivo (bit stimati: " + s.totalH().toFixed(1) + ")");
   if (!s.fineCiclo()) avvisi.push("il giro non è finito");
   if (avvisi.length) chiediConferma("Attenzione: " + avvisi.join("; ") + ". Concludere comunque?", () => { stato.termina = true; });
   else stato.termina = true;
@@ -490,7 +490,8 @@ function banner() {
   return el("div", { class: "warning-banner" }, [
     "⚠ ", el("b", { text: "Da solo il Generatore non basta." }),
     " I bit che produce vanno uniti ad altre sorgenti INDIPENDENTI con " + PIPELINE +
-    " (lo strumento della suite entropy-suite, che li estrae con Peres e Toeplitz). Da solo il Generatore non produce una chiave."
+    " (lo strumento della suite entropy-suite, che li estrae con Peres e Toeplitz). Da solo il Generatore non produce una chiave." +
+    " Non è un generatore casuale per uso crittografico (CSPRNG): i «bit stimati» sono una stima con un modello prudente, non una prova di casualità."
   ]);
 }
 function tabella(intest, righe) {
@@ -520,12 +521,12 @@ function blocchiAvanzamento(s) {
   const riga = t => box.appendChild(el("p", { text: t }));
   if (s.modo === "entropia") {
     frac = Math.min(1, h / s.soglia);
-    riga("Bit raccolti: " + String(tot).padStart(4) + "      Bit sicuri (stima): " + f1(h, 6) + " su " + s.soglia);
+    riga("Bit raccolti: " + String(tot).padStart(4) + "      Bit stimati: " + f1(h, 6) + " su " + s.soglia);
   } else if (s.modo === "bit") {
     frac = Math.min(1, tot / s.soglia);
-    riga("Bit raccolti: " + String(tot).padStart(4) + " su " + s.soglia + "      Bit sicuri (stima): " + f1(h, 6));
+    riga("Bit raccolti: " + String(tot).padStart(4) + " su " + s.soglia + "      Bit stimati: " + f1(h, 6));
   } else {
-    riga("Bit raccolti: " + String(tot).padStart(4) + "      Bit sicuri (stima): " + f1(h, 6));
+    riga("Bit raccolti: " + String(tot).padStart(4) + "      Bit stimati: " + f1(h, 6));
     riga("Scrivi «fine» quando vuoi concludere.");
   }
   if (frac !== null) {
@@ -611,7 +612,7 @@ function renderFine(radice) {
   const sogliaOk = s.modo !== "nessuna" ? s.sogliaRaggiunta() : true;
   radice.appendChild(banner());
   const corpo = [];
-  const righe = ["Hai raccolto " + s.totalBits() + " bit.  Bit sicuri (stima prudente): " + f1(s.totalH())];
+  const righe = ["Hai raccolto " + s.totalBits() + " bit.  Bit stimati (modello prudente): " + f1(s.totalH())];
   if (s.modo !== "nessuna") righe.push("Obiettivo raggiunto: " + (sogliaOk ? "SI" : "NO"));
   righe.push("Rilanci del dado: " + s.rilanci.length);
   corpo.push(boxStato(righe, s.modo === "nessuna" || sogliaOk ? "ok" : "warn"));
@@ -697,12 +698,12 @@ function aggiornaInfoPrep() {
   if (cfg.profilo.biasRel === 0 && cfg.profilo.pSame === 0.5)
     box.appendChild(boxStato(["ATTENZIONE: «solo prova» non tiene conto di nessuno squilibrio. Non usarlo per una chiave vera."], "warn"));
   const hc = hCiclo(cfg.profilo, cfg.nd, cfg.nm, cfg.nt), bc = bitCiclo(cfg.nd, cfg.nm, cfg.nt);
-  box.appendChild(el("p", { style: "font-size:.82rem;margin:10px 0 6px;" }, ["Ogni giro ti dà " + bc + " bit e circa " + hc.toFixed(1) + " bit sicuri. Per ricavare una chiave da 256 bit servono:"]));
-  box.appendChild(tabella(["Obiettivo", "Bit sicuri", "Giri", "Bit grezzi"],
+  box.appendChild(el("p", { style: "font-size:.82rem;margin:10px 0 6px;" }, ["Ogni giro ti dà " + bc + " bit e circa " + hc.toFixed(1) + " bit stimati. Per ricavare una chiave da 256 bit servono:"]));
+  box.appendChild(tabella(["Obiettivo", "Bit stimati", "Giri", "Bit grezzi"],
     TARGET_SUGGERITI.map(([t, etichetta]) => { const c = ciclPer(t, hc); return [etichetta, t, c, c * bc]; })));
   const extra = [];
-  if (cfg.modo === "entropia" && cfg.soglia < 256) extra.push("ATTENZIONE: con meno di 256 bit sicuri non puoi ricavare una chiave da 256 bit.");
-  if (cfg.modo === "bit") extra.push("Con " + cfg.soglia + " bit raccolti avrai circa " + (cfg.soglia * hc / bc).toFixed(0) + " bit sicuri.");
+  if (cfg.modo === "entropia" && cfg.soglia < 256) extra.push("ATTENZIONE: con meno di 256 bit stimati non puoi ricavare una chiave da 256 bit.");
+  if (cfg.modo === "bit") extra.push("Con " + cfg.soglia + " bit raccolti avrai circa " + (cfg.soglia * hc / bc).toFixed(0) + " bit stimati.");
   if (extra.length) box.appendChild(el("div", { style: "margin-top:8px;" }, [boxStato(extra, "warn")]));
   box.appendChild(el("div", { style: "margin-top:8px;" }, [boxStato(righeRipetizioni(cfg), "neutral")]));
 }
@@ -730,14 +731,14 @@ function renderPrep(radice) {
   ]);
   const box3 = el("div", { class: "source-box" }, [
     el("h3", { text: "3) Quando vuoi fermarti?" }),
-    radio("stop", "1", "quando ho abbastanza bit sicuri (consigliato)"),
-    campoNum("sogliaH", String(TARGET_DEFAULT), "Quanti bit sicuri vuoi? (consigliato: " + TARGET_DEFAULT + ")", { min: "1" }),
+    radio("stop", "1", "quando ho abbastanza bit stimati (consigliato)"),
+    campoNum("sogliaH", String(TARGET_DEFAULT), "Quanti bit stimati vuoi? (consigliato: " + TARGET_DEFAULT + ")", { min: "1" }),
     radio("stop", "2", "dopo un certo numero di bit (la versione 1 usava " + BIT_DEFAULT + ")"),
     campoNum("sogliaB", String(BIT_DEFAULT), "Quanti bit vuoi raccogliere?", { min: "1" }),
     radio("stop", "3", "quando lo dico io, scrivendo «fine»")
   ]);
   const corpo = [
-    el("p", { class: "testo", text: "Questa pagina trasforma i tuoi lanci di dado e di moneta e le tue estrazioni della tombola in una lunga sequenza di 0 e 1. Ti dice anche quanti «bit sicuri» hai raccolto: più sono, meglio è." }),
+    el("p", { class: "testo", text: "Questa pagina trasforma i tuoi lanci di dado e di moneta e le tue estrazioni della tombola in una lunga sequenza di 0 e 1. Ti dice anche quanti «bit stimati» hai raccolto: più sono, meglio è." }),
     el("div", { class: "grid4" }, [box1, box2]), el("div", { class: "grid4", style: "grid-template-columns:1fr;" }, [box3]),
     el("div", { id: "infoPrep", "aria-live": "polite" }),
     el("div", { class: "row", style: "margin-top:12px;" }, [
@@ -791,7 +792,7 @@ function eseguiControlli() {
   chk("Modello, profilo prudente: dado 1,8931, moneta 0,9714, tombola 2,9296, giro 5,7941", () => {
     const p = PROFILI["2"];
     return p.hDado().toFixed(4) === "1.8931" && p.hMoneta().toFixed(4) === "0.9714" && p.hTombola().toFixed(4) === "2.9296" && hCiclo(p, 1, 1, 1).toFixed(4) === "5.7941"; });
-  chk("Giri per 320, 384 e 416 bit sicuri nei tre profili (54-64-70, 56-67-72, 58-69-75)", () => {
+  chk("Giri per 320, 384 e 416 bit stimati nei tre profili (54-64-70, 56-67-72, 58-69-75)", () => {
     const att = { "1": [54, 64, 70], "2": [56, 67, 72], "3": [58, 69, 75] };
     return ["1", "2", "3"].every(k => JSON.stringify([320, 384, 416].map(t => ciclPer(t, hCiclo(PROFILI[k], 1, 1, 1)))) === JSON.stringify(att[k])); });
   chk("Quante volte ripetere: 360 bit → 4, 402 bit → 3, 1200 bit → 1, 6 bit → 200", () =>
@@ -825,7 +826,7 @@ function eseguiControlli() {
     processaSu(s, "moneta", "C"); processaSu(s, "dado", "1"); processaSu(s, "tombola", "3");
     const d = new Date(2026, 9, 2, 12, 0, 0), r = testoRegistro(s, d, d, true, true);
     return r.includes("NON basta") && r.includes("Coerenza cronologia/esiti: OK") && r.includes("SHA-256 della stringa di bit: " + sha256Testo("100010")) && r.includes("2026-10-02 12:00:00"); });
-  chk("Nome dei file: «bits.txt» → bits_registro.txt; nomi con caratteri strani resi sicuri", () => {
+  chk("Nome dei file: «bits.txt» → bits_registro.txt; nomi con caratteri strani normalizzati", () => {
     const a = nomiFile("bits.txt"), b = nomiFile("a b/c.txt"), c = nomiFile("");
     return a[0] === "bits.txt" && a[1] === "bits_registro.txt" && b[0] === "a_b_c.txt" && c[0] === "bits.txt"; });
   return out;

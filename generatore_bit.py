@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generatore di bit da fonti fisiche (moneta, dado, tombola) - versione 2.8
+Generatore di bit da fonti fisiche (moneta, dado, tombola) - versione 2.9-beta
 
 - Moneta: T/0 -> 0, C/1 -> 1
 - Dado a 6 facce: 1-4 -> 2 bit (1=00, 2=01, 3=10, 4=11); 5 e 6 = rilancio
@@ -17,6 +17,7 @@ Generatore di bit da fonti fisiche (moneta, dado, tombola) - versione 2.8
 - Sullo schermo la prudenza scelta compare solo come nome in maiuscolo (per esempio PRUDENTE), senza etichetta
 - Salvataggio con permessi riservati (0600 su Linux/Mac) + registro di controllo
 - Avviso chiaro: da solo NON basta, va unito ad altre sorgenti con EntropyPipeline (beta6 o successiva)
+- Avviso: non e' un CSPRNG; i "bit stimati" sono una stima con un modello prudente, non una prova di casualita'
 - Se si usa solo il Generatore, indica quante volte va ripetuta l'esecuzione
 """
 
@@ -40,17 +41,17 @@ except ImportError:
     except ImportError:
         MODO_TASTI = None
 
-VERSIONE = "2.8"
+VERSIONE = "2.9-beta"
 MAX_UNDO = 20                  # massimo esiti annullabili con un singolo comando
 RECENT_SHOW = 12
 BIT_DEFAULT = 480              # soglia in bit grezzi usata dalla versione 1
 TARGET_DEFAULT = 384           # bit di min-entropia (vedi guida, sezione 5)
 TOTALE_DEFAULT = 1200          # bit grezzi in tutto per 256 bit con il solo Generatore (EntropyPipeline beta6)
 PIPELINE = "EntropyPipeline v2.0.0-beta6 o successiva"
-TARGET_SUGGERITI = (            # (bit sicuri, etichetta mostrata)
+TARGET_SUGGERITI = (            # (bit stimati, etichetta mostrata)
     (320, "minimo"),
     (384, "consigliato"),
-    (416, "piu' sicuro"),
+    (416, "piu' prudente"),
 )
 BITS_PER_ESITO = {"dado": 2, "moneta": 1, "tombola": 3}
 ORDINE_FONTI = ("moneta", "dado", "tombola")
@@ -462,7 +463,7 @@ def testo_registro(sess, inizio, fine, soglia_ok):
     L.append(f"Comandi di annullamento: {n_undo} (esiti annullati in totale: {n_rim})")
     L.append(f"Rilanci del dado (5 o 6): {len(sess.rilanci)}")
     L.append(f"Bit totali: {sess.total_bits()}")
-    L.append(f"Bit sicuri stimati (min-entropia, modello prudente): {sess.total_h():.2f}")
+    L.append(f"Bit stimati (min-entropia, modello prudente): {sess.total_h():.2f}")
     if sess.modo != "nessuna":
         L.append("Soglia raggiunta: " + ("si" if soglia_ok else "NO"))
     L.append(f"Coerenza cronologia/esiti: {'OK' if sess.coerente() else 'ERRORE'}")
@@ -558,13 +559,15 @@ class Programma:
         print("═" * 66)
         print("  Questo programma trasforma i tuoi lanci di dado e di moneta e le tue")
         print("  estrazioni della tombola in una lunga sequenza di 0 e 1.")
-        print("  Ti dice anche quanti 'bit sicuri' hai raccolto: piu' sono, meglio e'.")
+        print("  Ti dice anche quanti 'bit stimati' hai raccolto: piu' sono, meglio e'.")
         print()
         print("  IMPORTANTE: da solo questo programma NON basta.")
         print("  I bit che produce vanno uniti ad altre sorgenti INDIPENDENTI con")
         print("  EntropyPipeline v2.0.0-beta6 o successiva (lo strumento della suite")
         print("  entropy-suite, che li estrae con Peres e Toeplitz). Da solo il Generatore")
         print("  non produce una chiave.")
+        print("  Non e' un generatore casuale per uso crittografico (CSPRNG): i 'bit stimati'")
+        print("  sono una stima con un modello prudente, non una prova di casualita'.")
         print()
         profilo = self.scegli_profilo()
         if profilo.bias_rel == 0 and profilo.p_same == 0.5:
@@ -588,14 +591,14 @@ class Programma:
         hc = h_ciclo(profilo, nd, nm, nt)
         bc = bit_ciclo(nd, nm, nt)
         print()
-        print(f"  Ogni giro ti da' {bc} bit e circa {hc:.1f} bit sicuri.")
+        print(f"  Ogni giro ti da' {bc} bit e circa {hc:.1f} bit stimati.")
         print("  Per ricavare una chiave da 256 bit servono:")
         for t, etichetta in TARGET_SUGGERITI:
             c = cicli_per(t, hc)
-            print(f"     {etichetta:12s} {t} bit sicuri  →  {c} giri ({c * bc} bit)")
+            print(f"     {etichetta:12s} {t} bit stimati  →  {c} giri ({c * bc} bit)")
         print()
         print("  3) QUANDO VUOI FERMARTI?")
-        print("      1) quando ho abbastanza bit sicuri  (consigliato)")
+        print("      1) quando ho abbastanza bit stimati  (consigliato)")
         print(f"      2) dopo un certo numero di bit      (la versione 1 usava {BIT_DEFAULT})")
         print("      3) quando lo dico io, scrivendo 'fine'")
         while True:
@@ -605,17 +608,17 @@ class Programma:
             print("  Scelta non valida")
         if r == "1":
             soglia = self._chiedi_int(
-                f"  Quanti bit sicuri vuoi? Invio per {TARGET_DEFAULT} (consigliato) → ",
+                f"  Quanti bit stimati vuoi? Invio per {TARGET_DEFAULT} (consigliato) → ",
                 minimo=1, default=TARGET_DEFAULT)
             modo = "entropia"
             if soglia < 256:
-                print("  ATTENZIONE: con meno di 256 bit sicuri non puoi ricavare una chiave da 256 bit.")
+                print("  ATTENZIONE: con meno di 256 bit stimati non puoi ricavare una chiave da 256 bit.")
         elif r == "2":
             soglia = self._chiedi_int(
                 f"  Quanti bit vuoi raccogliere? Invio per {BIT_DEFAULT} → ",
                 minimo=1, default=BIT_DEFAULT)
             modo = "bit"
-            print(f"  Con {soglia} bit raccolti avrai circa {soglia * hc / bc:.0f} bit sicuri.")
+            print(f"  Con {soglia} bit raccolti avrai circa {soglia * hc / bc:.0f} bit stimati.")
         else:
             soglia, modo = 0, "nessuna"
         self.s = Sessione(profilo, nd, nm, nt, modo, soglia)
@@ -652,13 +655,13 @@ class Programma:
         bar_len = 40
         if s.modo == "entropia":
             frac = min(1.0, h / s.soglia)
-            print(f"  Bit raccolti: {tot:4d}      Bit sicuri (stima): {h:6.1f} su {s.soglia:g}")
+            print(f"  Bit raccolti: {tot:4d}      Bit stimati: {h:6.1f} su {s.soglia:g}")
         elif s.modo == "bit":
             frac = min(1.0, tot / s.soglia)
-            print(f"  Bit raccolti: {tot:4d} su {s.soglia}      Bit sicuri (stima): {h:6.1f}")
+            print(f"  Bit raccolti: {tot:4d} su {s.soglia}      Bit stimati: {h:6.1f}")
         else:
             frac = None
-            print(f"  Bit raccolti: {tot:4d}      Bit sicuri (stima): {h:6.1f}")
+            print(f"  Bit raccolti: {tot:4d}      Bit stimati: {h:6.1f}")
             print("  Scrivi 'fine' quando vuoi concludere.")
         if frac is not None:
             filled = int(bar_len * frac)
@@ -719,7 +722,7 @@ class Programma:
                 return None
             avvisi = []
             if s.modo != "nessuna" and not s.soglia_raggiunta():
-                avvisi.append(f"non hai ancora raggiunto l'obiettivo (bit sicuri stimati: {s.total_h():.1f})")
+                avvisi.append(f"non hai ancora raggiunto l'obiettivo (bit stimati: {s.total_h():.1f})")
             if not s.fine_ciclo():
                 avvisi.append("il giro non e' finito")
             if avvisi:
@@ -793,7 +796,7 @@ class Programma:
         self.disegna("RIEPILOGO FINALE",
                      "Premi Invio per confermare   |   scrivi u per annullare l'ultimo inserimento e continuare")
         stringa = s.bitstring()
-        print(f"  Hai raccolto {s.total_bits()} bit.  Bit sicuri (stima prudente): {s.total_h():.1f}")
+        print(f"  Hai raccolto {s.total_bits()} bit.  Bit stimati (modello prudente): {s.total_h():.1f}")
         if s.modo != "nessuna":
             print("  Obiettivo raggiunto: " + ("SI" if soglia_ok else "NO"))
         print(f"  Rilanci del dado: {len(s.rilanci)}")
